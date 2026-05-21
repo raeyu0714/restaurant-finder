@@ -9,7 +9,7 @@ body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-se
   top: 0; bottom: 0; left: 0;
   right: 0;
   background: #e8f0e9;
-  transition: right 0.3s ease, bottom 0.3s ease;
+  transition: left 0.3s ease, right 0.3s ease, bottom 0.3s ease;
 }
 #map-container iframe {
   width: 100% !important;
@@ -17,11 +17,11 @@ body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-se
   border: none;
   display: block;
 }
-/* When chat is open, map shrinks to left 55% */
+/* When chat is open, map shifts right (chat on left) */
 body.chat-open #map-container {
-  right: 45%;
+  left: 360px;
 }
-/* When groups panel is open, map also shrinks */
+/* When groups panel is open, map shifts left (groups on right) */
 body.groups-open #map-container {
   right: 360px;
 }
@@ -119,8 +119,9 @@ body.groups-open #map-container {
 
 #fav-tab {
   position: absolute;
-  right: -38px; top: 50%;
-  transform: translateY(-50%);
+  right: -38px;
+  /* viewport: 50vh + 60px = fav-sidebar top(48px) + calc(50vh + 12px) */
+  top: calc(50vh + 12px);
   background: #fff;
   border: 1px solid #dde3ea;
   border-left: none;
@@ -136,7 +137,6 @@ body.groups-open #map-container {
   z-index: 211;
 }
 #fav-tab:hover { background: #fef5f5; }
-#fav-tab-label { font-size: .7rem; color: #888; display: block; }
 
 #fav-content {
   width: 260px; height: 100%;
@@ -207,42 +207,48 @@ body.groups-open #map-container {
 }
 #spin-btn:hover { transform: scale(1.1) rotate(20deg); background: #d35400; }
 
-/* ── Chat toggle button ──────────────────────────────────── */
+/* ── Chat toggle button (left-side vertical tab) ─────────── */
 #chat-toggle {
   position: fixed;
-  bottom: 1.8rem; right: 1.8rem;
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  background: #3498db;
-  color: #fff; border: none;
-  font-size: 1.6rem;
-  box-shadow: 0 4px 20px rgba(52,152,219,.55);
+  left: 0;
+  top: calc(50vh - 45px);
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  padding: .6rem .45rem;
   cursor: pointer;
-  z-index: 300;
-  transition: transform .2s, background .2s;
-  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem;
+  box-shadow: 3px 0 10px rgba(0,0,0,.1);
+  writing-mode: vertical-rl;
+  text-align: center;
+  z-index: 215;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  user-select: none;
+  color: #333;
 }
-#chat-toggle:hover { transform: scale(1.1); background: #2980b9; }
-#chat-toggle.open { background: #e74c3c; }
-body.chat-open #chat-toggle {
-  bottom: calc(1.8rem + 60px + 0.8rem + 60px + 0.8rem);
-}
+#chat-toggle:hover  { background: #f0f7ff; }
+#chat-toggle.open   { background: #e8f0fd; border-color: #c5d8f8; }
 
-/* ── Chat panel ──────────────────────────────────────────── */
+/* ── Chat panel (left side) ──────────────────────────────── */
 #chat-panel {
   position: fixed;
-  top: 48px; bottom: 0; right: 0;
-  width: 45%;
+  top: 48px; bottom: 0; left: 0;
+  width: 360px;
   background: #fff;
-  border-left: 1px solid #dde3ea;
-  box-shadow: -4px 0 24px rgba(0,0,0,.12);
+  border-right: 1px solid #dde3ea;
+  box-shadow: 4px 0 24px rgba(0,0,0,.12);
   display: flex; flex-direction: column;
   z-index: 250;
   overflow: hidden;
-  animation: slideIn .25s ease;
+  animation: slideInFromLeft .25s ease;
 }
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(30px); }
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-30px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -566,13 +572,11 @@ body.chat-open #chat-toggle {
 }
 #spin-cancel-btn:hover { color: #e74c3c; }
 
-/* ── Groups floating button (left side, above fav-tab) ──── */
+/* ── Groups floating button (left side, between chat and fav) */
 #groups-btn {
   position: fixed;
   left: 0;
-  /* fav-sidebar top=48px, fav-tab is at 50% of sidebar height → ~(48 + 50vh)/2 */
-  /* place groups-btn about 80px above fav-tab center */
-  top: calc(50vh - 40px);
+  top: calc(50vh + 5px);
   background: #fff;
   border: 1px solid #dde3ea;
   border-left: none;
@@ -584,7 +588,7 @@ body.chat-open #chat-toggle {
   box-shadow: 3px 0 10px rgba(0,0,0,.1);
   writing-mode: vertical-rl;
   text-align: center;
-  z-index: 211;
+  z-index: 215;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -915,20 +919,19 @@ body.chat-open #chat-toggle {
 /* Tablet (641–1024px) */
 @media (max-width: 1024px) {
   #chat-panel { width: 55%; }
-  body.chat-open #map-container { right: 55%; }
+  body.chat-open #map-container { left: 55%; }
   #groups-panel { width: 55%; }
   body.groups-open #map-container { right: 55%; }
 }
 
 /* Mobile (≤640px) */
 @media (max-width: 640px) {
-  /* Chat panel — bottom sheet rising from the bottom */
+  /* Chat panel — bottom sheet on mobile */
   #chat-panel {
-    width: 100%;
-    top: auto;
-    bottom: 0;
+    width: 100%; left: 0;
+    top: auto; bottom: 0;
     height: 50vh;
-    border-left: none;
+    border-right: none;
     border-top: 1px solid #dde3ea;
     border-radius: 18px 18px 0 0;
     box-shadow: 0 -6px 28px rgba(0,0,0,.15);
@@ -938,8 +941,8 @@ body.chat-open #chat-toggle {
     from { transform: translateY(100%); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
-  /* Map shrinks upward when sheet is open */
-  body.chat-open #map-container { right: 0; bottom: 50vh; }
+  /* Map shrinks upward when chat is open on mobile */
+  body.chat-open #map-container { left: 0; bottom: 50vh; }
 
   /* Toolbar */
   #location-display { display: none !important; }
@@ -951,16 +954,19 @@ body.chat-open #chat-toggle {
   /* Login modal */
   #login-modal { width: min(340px, 90vw); padding: 1.6rem 1.4rem; }
 
-  /* Floating buttons */
-  #chat-toggle { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
-  #spin-btn    { bottom: calc(1.2rem + 54px + 0.7rem); right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
-  body.chat-open #chat-toggle { bottom: calc(1.2rem + 54px + 0.7rem + 54px + 0.7rem); }
+  /* Floating dice button */
+  #spin-btn { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
+
+  /* Left tabs — smaller on mobile */
+  #chat-toggle, #groups-btn { padding: .45rem .38rem; font-size: .78rem; }
+  #chat-toggle { top: calc(50vh - 40px); }
+  #groups-btn  { top: calc(50vh + 5px); }
 
   /* Favourites sidebar — slides in fully within screen */
   #fav-sidebar { width: 80vw; left: -80vw; }
   #fav-sidebar.open { left: 0; }
   #fav-content { width: 80vw; }
-  #fav-tab { right: -36px; }
+  #fav-tab { right: -36px; top: calc(50vh + 12px); }
 
   /* Groups panel — bottom sheet on mobile */
   #groups-panel {

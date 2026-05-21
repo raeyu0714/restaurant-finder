@@ -476,18 +476,16 @@ const App = {
     GroupsPanel.close();          // close groups panel if open
     this._chatOpen = true;
     document.body.classList.add("chat-open");
-    document.getElementById("chat-panel").style.display  = "flex";
+    document.getElementById("chat-panel").style.display = "flex";
     document.getElementById("chat-toggle").classList.add("open");
-    document.getElementById("chat-toggle-icon").textContent = "✕";
     document.getElementById("chat-input").focus();
   },
 
   _closeChat() {
     this._chatOpen = false;
     document.body.classList.remove("chat-open");
-    document.getElementById("chat-panel").style.display    = "none";
+    document.getElementById("chat-panel").style.display = "none";
     document.getElementById("chat-toggle").classList.remove("open");
-    document.getElementById("chat-toggle-icon").textContent = "💬";
   },
 
   // ── Messaging ─────────────────────────────────────────────────────────────
