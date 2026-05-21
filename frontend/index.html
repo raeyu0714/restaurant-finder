@@ -31,59 +31,8 @@
       <button id="location-cancel-btn" class="toolbar-btn" style="padding:.3rem .5rem;opacity:.7;">✕</button>
     </div>
     <button id="relocate-btn" class="toolbar-btn" style="display:none" title="重新定位">📍 定位</button>
-    <button id="demo-btn"     class="toolbar-btn" style="display:none" title="系統演示">🎬 演示</button>
     <button id="admin-btn"    class="toolbar-btn" style="display:none" title="用戶管理">👥 用戶</button>
     <button id="logout-btn"   class="toolbar-btn" style="display:none" title="登出">⎋ 登出</button>
-  </div>
-
-  <!-- Demo trace modal -->
-  <div id="demo-overlay" style="display:none">
-    <div id="demo-modal">
-      <!-- Input screen -->
-      <div id="demo-input-screen">
-        <div id="demo-modal-header">
-          <span>🎬 系統演示</span>
-          <button class="demo-close-btn">✕</button>
-        </div>
-        <p id="demo-intro">輸入一個查詢，系統會逐步展示每個處理步驟的實際資料。</p>
-        <input id="demo-query-input" type="text" placeholder="例如：10分鐘內想吃冰">
-        <button id="demo-start-btn">開始演示 ▶</button>
-        <p id="demo-input-error" class="error-text"></p>
-      </div>
-      <!-- Steps screen -->
-      <div id="demo-steps-screen" style="display:none;flex-direction:column;flex:1;min-height:0">
-        <div id="demo-modal-header2">
-          <button id="demo-back-btn" title="重新輸入">← 重來</button>
-          <span id="demo-step-counter"></span>
-          <button class="demo-close-btn">✕</button>
-        </div>
-        <div id="demo-dots"></div>
-        <!-- Two columns -->
-        <div id="demo-columns">
-          <!-- Left: step info + nav -->
-          <div id="demo-left">
-            <div id="demo-step-body">
-              <div id="demo-step-emoji"></div>
-              <div id="demo-step-title"></div>
-              <div id="demo-step-desc"></div>
-            </div>
-            <div id="demo-nav">
-              <button id="demo-prev-btn">◀ 上一步</button>
-              <button id="demo-auto-btn">⏵ 自動播放</button>
-              <button id="demo-next-btn">下一步 ▶</button>
-            </div>
-          </div>
-          <!-- Right: raw request / response -->
-          <div id="demo-right">
-            <div id="demo-right-header">
-              <button class="demo-tab active" data-tab="request">📤 Request</button>
-              <button class="demo-tab" data-tab="response">📥 Response</button>
-            </div>
-            <div id="demo-right-body"><pre id="demo-raw-content"></pre></div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Admin users modal -->
