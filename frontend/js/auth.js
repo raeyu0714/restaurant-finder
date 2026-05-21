@@ -29,6 +29,19 @@ const Auth = {
     return true;
   },
 
+  async register(username, password) {
+    const res = await fetch(`${CONFIG.BACKEND_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "註冊失敗，請稍後再試");
+    }
+    return await res.json();
+  },
+
   logout() {
     sessionStorage.removeItem(this.TOKEN_KEY);
   },

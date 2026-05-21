@@ -32,6 +32,11 @@ class Restaurant(BaseModel):
     reviews: list[str] = []
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
 class FavouriteRequest(BaseModel):
     id: str
     name: str

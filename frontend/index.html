@@ -34,19 +34,41 @@
     <button id="logout-btn"   class="toolbar-btn" style="display:none" title="登出">⎋ 登出</button>
   </div>
 
-  <!-- Login modal (shown until authenticated) -->
+  <!-- Login / Register modal (shown until authenticated) -->
   <div id="login-overlay">
     <div id="login-modal">
       <h2>🍜 附近餐廳搜尋</h2>
-      <p class="login-subtitle">登入後即可搜尋您附近的餐廳</p>
-      <form id="login-form">
-        <label for="username">帳號</label>
-        <input id="username" type="text" placeholder="demo" required autocomplete="username">
-        <label for="password">密碼</label>
-        <input id="password" type="password" placeholder="••••••" required autocomplete="current-password">
-        <button type="submit" class="btn-login">登入</button>
-      </form>
-      <p id="login-error" class="error-text"></p>
+
+      <!-- LOGIN PANEL -->
+      <div id="login-panel">
+        <p class="login-subtitle">登入後即可搜尋您附近的餐廳</p>
+        <form id="login-form">
+          <label for="username">帳號</label>
+          <input id="username" type="text" placeholder="帳號" required autocomplete="username">
+          <label for="password">密碼</label>
+          <input id="password" type="password" placeholder="••••••" required autocomplete="current-password">
+          <button type="submit" class="btn-login">登入</button>
+        </form>
+        <p id="login-error" class="error-text"></p>
+        <p class="auth-switch">還沒有帳號？<a id="show-register" href="#">立即註冊</a></p>
+      </div>
+
+      <!-- REGISTER PANEL (hidden by default) -->
+      <div id="register-panel" style="display:none">
+        <p class="login-subtitle">建立新帳號</p>
+        <form id="register-form">
+          <label for="reg-username">帳號 <span class="field-hint">（2–20 字元）</span></label>
+          <input id="reg-username" type="text" placeholder="輸入帳號" required autocomplete="username">
+          <label for="reg-password">密碼 <span class="field-hint">（至少 6 碼）</span></label>
+          <input id="reg-password" type="password" placeholder="••••••" required autocomplete="new-password">
+          <label for="reg-confirm">確認密碼</label>
+          <input id="reg-confirm" type="password" placeholder="再輸入一次" required autocomplete="new-password">
+          <button type="submit" class="btn-login">註冊</button>
+        </form>
+        <p id="register-error" class="error-text"></p>
+        <p id="register-success" class="success-text" style="display:none"></p>
+        <p class="auth-switch">已有帳號？<a id="show-login" href="#">返回登入</a></p>
+      </div>
     </div>
   </div>
 

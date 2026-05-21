@@ -19,12 +19,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from .config import get_settings, Settings
 from .auth.jwt_handler import create_access_token, make_auth_dependency
 from .crypto.signer import sign, verify, build_signed_data
-from .models.schemas import SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest
+from .models.schemas import SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest, RegisterRequest
 from .nlp.predictor import predict, models_exist
 from .services import nominatim as nom_service
 from .services import osrm as osrm_service
 from .services import google_places as gp_service
 from .services import favourites as fav_service
+from .services import user_store
 from .services.map_generator import build_map
 
 
@@ -130,14 +131,31 @@ def create_app() -> FastAPI:
     async def get_public_key():
         return {"public_key_pem": settings.RSA_PUBLIC_KEY_PEM}
 
+    # ── POST /register ───────────────────────────────────────────────────────
+
+    @app.post("/register", status_code=201)
+    async def register(req: RegisterRequest):
+        if len(req.username) < 2 or len(req.username) > 20:
+            raise HTTPException(status_code=400, detail="帳號長度須為 2–20 個字元")
+        if len(req.password) < 6:
+            raise HTTPException(status_code=400, detail="密碼至少 6 個字元")
+        try:
+            user = user_store.create_user(req.username, req.password)
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        return {"username": user["username"], "id": user["id"]}
+
     # ── POST /login ──────────────────────────────────────────────────────────
 
     @app.post("/login")
     async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-        if (
-            form_data.username != settings.DEMO_USERNAME
-            or form_data.password != settings.DEMO_PASSWORD
-        ):
+        # Check registered users first, then fall back to the demo account
+        is_demo = (
+            form_data.username == settings.DEMO_USERNAME
+            and form_data.password == settings.DEMO_PASSWORD
+        )
+        is_registered = user_store.verify_user(form_data.username, form_data.password)
+        if not is_demo and not is_registered:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="帳號或密碼錯誤",

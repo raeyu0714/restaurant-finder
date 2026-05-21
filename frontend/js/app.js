@@ -43,6 +43,50 @@ const App = {
       Auth.logout();
       location.reload();
     });
+
+    // Toggle to register panel
+    document.getElementById("show-register").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("login-panel").style.display    = "none";
+      document.getElementById("register-panel").style.display = "block";
+      document.getElementById("login-error").textContent      = "";
+    });
+
+    // Toggle back to login panel
+    document.getElementById("show-login").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("register-panel").style.display = "none";
+      document.getElementById("login-panel").style.display    = "block";
+      document.getElementById("register-error").textContent   = "";
+      document.getElementById("register-success").style.display = "none";
+    });
+
+    // Register form submit
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errEl     = document.getElementById("register-error");
+      const successEl = document.getElementById("register-success");
+      errEl.textContent = "";
+      successEl.style.display = "none";
+
+      const username = document.getElementById("reg-username").value.trim();
+      const password = document.getElementById("reg-password").value;
+      const confirm  = document.getElementById("reg-confirm").value;
+
+      if (password !== confirm) {
+        errEl.textContent = "兩次密碼不一致";
+        return;
+      }
+      try {
+        await Auth.register(username, password);
+        successEl.textContent  = `帳號「${username}」建立成功！正在登入…`;
+        successEl.style.display = "block";
+        await Auth.login(username, password);
+        this._onLoginSuccess();
+      } catch (err) {
+        errEl.textContent = err.message;
+      }
+    });
   },
 
   _onLoginSuccess() {

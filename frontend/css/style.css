@@ -94,7 +94,12 @@ body.chat-open #map-container {
   cursor: pointer; transition: background .2s;
 }
 .btn-login:hover { background: #2980b9; }
-.error-text { color: #e74c3c; font-size: .85rem; margin-top: .4rem; }
+.error-text { color: #e74c3c; font-size: .82rem; margin-top: .4rem; min-height: 1.1rem; }
+.success-text { color: #27ae60; font-size: .82rem; margin-top: .4rem; }
+.auth-switch { font-size: .82rem; color: #777; margin-top: .8rem; text-align: center; }
+.auth-switch a { color: #3498db; text-decoration: none; font-weight: 600; }
+.auth-switch a:hover { text-decoration: underline; }
+.field-hint { font-weight: 400; color: #aaa; font-size: .76rem; }
 
 /* ── Favourites sidebar ──────────────────────────────────────────────────── */
 #fav-sidebar {
