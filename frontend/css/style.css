@@ -566,14 +566,43 @@ body.chat-open #chat-toggle {
 }
 #spin-cancel-btn:hover { color: #e74c3c; }
 
+/* ── Groups floating button (left side, above fav-tab) ──── */
+#groups-btn {
+  position: fixed;
+  left: 0;
+  /* fav-sidebar top=48px, fav-tab is at 50% of sidebar height → ~(48 + 50vh)/2 */
+  /* place groups-btn about 80px above fav-tab center */
+  top: calc(50vh - 40px);
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  padding: .6rem .45rem;
+  cursor: pointer;
+  font-size: .85rem;
+  line-height: 1.4;
+  box-shadow: 3px 0 10px rgba(0,0,0,.1);
+  writing-mode: vertical-rl;
+  text-align: center;
+  z-index: 211;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  transition: background .15s;
+  user-select: none;
+}
+#groups-btn:hover  { background: #f0f7ff; }
+#groups-btn.active { background: #e8f0fd; border-color: #c5d8f8; }
+
 /* ── Invitation badge ────────────────────────────────────── */
 .inv-badge {
   display: inline-flex; align-items: center; justify-content: center;
   background: #e74c3c; color: #fff;
   font-size: .62rem; font-weight: 700;
   width: 16px; height: 16px; border-radius: 50%;
-  margin-left: 2px; vertical-align: top;
   line-height: 1;
+  writing-mode: horizontal-tb; /* override vertical in groups-btn */
 }
 
 /* ── Groups side panel ───────────────────────────────────── */

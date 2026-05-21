@@ -103,7 +103,7 @@ const App = {
     this._bindAdminBtn();
     this._loadLocation();
     this._loadFavourites();
-    document.getElementById("groups-btn").style.display = "inline-flex";
+    document.getElementById("groups-btn").style.display = "flex";
     GroupsPanel.init();
   },
 
@@ -473,6 +473,7 @@ const App = {
   },
 
   _openChat() {
+    GroupsPanel.close();          // close groups panel if open
     this._chatOpen = true;
     document.body.classList.add("chat-open");
     document.getElementById("chat-panel").style.display  = "flex";
@@ -724,6 +725,8 @@ const GroupsPanel = {
   },
 
   open() {
+    App._closeChat();             // close AI chat panel if open
+    document.getElementById("groups-btn").classList.add("active");
     document.getElementById("groups-panel").style.display = "flex";
     document.body.classList.add("groups-open");
     this._showView("list");
@@ -733,6 +736,7 @@ const GroupsPanel = {
 
   close() {
     this._stopPolling();
+    document.getElementById("groups-btn").classList.remove("active");
     document.getElementById("groups-panel").style.display = "none";
     document.body.classList.remove("groups-open");
     this._currentGroupId = null;
