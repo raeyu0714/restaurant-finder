@@ -259,6 +259,7 @@ const App = {
     document.getElementById("spin-confirm-btn").addEventListener("click", () => {
       if (!this._spinResult) return;
       this._closeSpin();
+      if (!this._chatOpen) this._openChat();
       document.getElementById("chat-input").value = this._spinResult.query;
       this._handleMessage(this._spinResult.query);
     });

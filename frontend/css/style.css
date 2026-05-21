@@ -9,7 +9,7 @@ body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-se
   top: 0; bottom: 0; left: 0;
   right: 0;
   background: #e8f0e9;
-  transition: right 0.3s ease;
+  transition: right 0.3s ease, bottom 0.3s ease;
 }
 #map-container iframe {
   width: 100% !important;
@@ -469,11 +469,26 @@ body.chat-open #map-container {
 
 /* Mobile (≤640px) */
 @media (max-width: 640px) {
-  /* Map */
-  #chat-panel { width: 100%; top: 48px; }
-  body.chat-open #map-container { right: 100%; }
+  /* Chat panel — bottom sheet rising from the bottom */
+  #chat-panel {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+    height: 72vh;
+    border-left: none;
+    border-top: 1px solid #dde3ea;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 28px rgba(0,0,0,.15);
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  /* Map shrinks upward when sheet is open */
+  body.chat-open #map-container { right: 0; bottom: 72vh; }
 
-  /* Toolbar: hide location label to save space, shrink buttons */
+  /* Toolbar */
   #location-display { display: none !important; }
   #toolbar { gap: .5rem; padding: 0 .6rem; }
   #toolbar-title { font-size: .88rem; }
@@ -487,9 +502,11 @@ body.chat-open #map-container {
   #chat-toggle { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
   #spin-btn    { bottom: calc(1.2rem + 54px + 0.7rem); right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
 
-  /* Favourites sidebar: full width overlay on mobile */
-  #fav-sidebar { width: 85vw; }
-  #fav-content { width: 85vw; }
+  /* Favourites sidebar — slides in fully within screen */
+  #fav-sidebar { width: 80vw; left: -80vw; }
+  #fav-sidebar.open { left: 0; }
+  #fav-content { width: 80vw; }
+  #fav-tab { right: -36px; }
 
   /* Spin modal */
   #spin-modal { width: min(300px, 88vw); padding: 1.5rem 1.2rem; }
@@ -497,8 +514,8 @@ body.chat-open #map-container {
   #spin-emoji { font-size: 2.7rem; }
   #spin-label { font-size: 1rem; }
 
-  /* Chat messages: slightly smaller text */
-  .msg-bubble   { font-size: .84rem; }
-  .result-card  { font-size: .8rem; }
-  #chat-input   { font-size: .85rem; }
+  /* Chat text */
+  .msg-bubble  { font-size: .84rem; }
+  .result-card { font-size: .8rem; }
+  #chat-input  { font-size: .85rem; }
 }
