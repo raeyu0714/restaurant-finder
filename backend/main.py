@@ -19,13 +19,17 @@ from fastapi.security import OAuth2PasswordRequestForm
 from .config import get_settings, Settings
 from .auth.jwt_handler import create_access_token, make_auth_dependency
 from .crypto.signer import sign, verify, build_signed_data
-from .models.schemas import SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest, RegisterRequest
+from .models.schemas import (
+    SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest, RegisterRequest,
+    CreateGroupRequest, InviteRequest, SendMessageRequest, CreateVoteRequest, CastVoteRequest,
+)
 from .nlp.predictor import predict, models_exist
 from .services import nominatim as nom_service
 from .services import osrm as osrm_service
 from .services import google_places as gp_service
 from .services import favourites as fav_service
 from .services import user_store
+from .services import group_store, invitation_store, message_store, vote_store
 from .services.map_generator import build_map
 
 
@@ -61,7 +65,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
-        allow_methods=["GET", "POST", "DELETE"],
+        allow_methods=["GET", "POST", "DELETE", "PUT"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
@@ -460,6 +464,194 @@ def create_app() -> FastAPI:
             signature=signature,
             signed_data=signed_str,
         )
+
+    # ── Group helpers ─────────────────────────────────────────────────────────
+
+    def _assert_member(group: dict, username: str) -> None:
+        if username not in group["members"]:
+            raise HTTPException(status_code=403, detail="您不是此群組成員")
+
+    # ── POST /groups ──────────────────────────────────────────────────────────
+
+    @app.post("/groups", status_code=201)
+    async def create_group(req: CreateGroupRequest, user: dict = Depends(get_current_user)):
+        name = req.name.strip()
+        if len(name) < 2 or len(name) > 30:
+            raise HTTPException(status_code=400, detail="群組名稱須為 2–30 個字元")
+        return group_store.create_group(name, user["sub"])
+
+    # ── GET /groups ───────────────────────────────────────────────────────────
+
+    @app.get("/groups")
+    async def list_groups(user: dict = Depends(get_current_user)):
+        return group_store.list_groups_for_user(user["sub"])
+
+    # ── GET /groups/{gid} ─────────────────────────────────────────────────────
+
+    @app.get("/groups/{gid}")
+    async def get_group(gid: str, user: dict = Depends(get_current_user)):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        return group
+
+    # ── DELETE /groups/{gid} ──────────────────────────────────────────────────
+
+    @app.delete("/groups/{gid}")
+    async def delete_group(gid: str, user: dict = Depends(get_current_user)):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        if group["creator"] != user["sub"]:
+            raise HTTPException(status_code=403, detail="只有群組建立者可以刪除群組")
+        group_store.delete_group(gid)
+        return {"status": "ok"}
+
+    # ── POST /groups/{gid}/invite ─────────────────────────────────────────────
+
+    @app.post("/groups/{gid}/invite")
+    async def invite_to_group(
+        gid: str,
+        req: InviteRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        target = user_store.get_user(req.username)
+        if not target:
+            raise HTTPException(status_code=404, detail=f"找不到使用者：{req.username}")
+        if req.username in group["members"]:
+            raise HTTPException(status_code=409, detail="該使用者已是群組成員")
+        try:
+            inv = invitation_store.create_invitation(gid, group["name"], user["sub"], req.username)
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        return inv
+
+    # ── GET /invitations ──────────────────────────────────────────────────────
+
+    @app.get("/invitations")
+    async def get_invitations(user: dict = Depends(get_current_user)):
+        return invitation_store.get_pending_for_user(user["sub"])
+
+    # ── POST /invitations/{iid}/accept ────────────────────────────────────────
+
+    @app.post("/invitations/{iid}/accept")
+    async def accept_invitation(iid: str, user: dict = Depends(get_current_user)):
+        try:
+            inv = invitation_store.accept_invitation(iid, user["sub"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        try:
+            group_store.add_member(inv["group_id"], user["sub"])
+        except ValueError:
+            pass
+        return inv
+
+    # ── POST /invitations/{iid}/decline ──────────────────────────────────────
+
+    @app.post("/invitations/{iid}/decline")
+    async def decline_invitation(iid: str, user: dict = Depends(get_current_user)):
+        try:
+            inv = invitation_store.decline_invitation(iid, user["sub"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        return inv
+
+    # ── GET /groups/{gid}/messages ────────────────────────────────────────────
+
+    @app.get("/groups/{gid}/messages")
+    async def get_messages(gid: str, user: dict = Depends(get_current_user)):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        return message_store.get_messages(gid)
+
+    # ── POST /groups/{gid}/messages ───────────────────────────────────────────
+
+    @app.post("/groups/{gid}/messages", status_code=201)
+    async def send_message(
+        gid: str,
+        req: SendMessageRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        text = req.text.strip()
+        if not text or len(text) > 500:
+            raise HTTPException(status_code=400, detail="訊息須為 1–500 個字元")
+        return message_store.add_message(gid, user["sub"], text)
+
+    # ── GET /groups/{gid}/votes ───────────────────────────────────────────────
+
+    @app.get("/groups/{gid}/votes")
+    async def get_votes(gid: str, user: dict = Depends(get_current_user)):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        return vote_store.list_votes(gid)
+
+    # ── POST /groups/{gid}/votes ──────────────────────────────────────────────
+
+    @app.post("/groups/{gid}/votes", status_code=201)
+    async def create_vote(
+        gid: str,
+        req: CreateVoteRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        title = req.title.strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="投票標題不能為空")
+        if len(req.options) < 2 or len(req.options) > 8:
+            raise HTTPException(status_code=400, detail="投票選項須為 2–8 個")
+        options = [opt.model_dump() for opt in req.options]
+        return vote_store.create_vote(gid, title, options, user["sub"])
+
+    # ── POST /groups/{gid}/votes/{vid}/cast ───────────────────────────────────
+
+    @app.post("/groups/{gid}/votes/{vid}/cast")
+    async def cast_vote(
+        gid: str,
+        vid: str,
+        req: CastVoteRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        try:
+            return vote_store.cast_vote(vid, user["sub"], req.option_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    # ── POST /groups/{gid}/votes/{vid}/close ──────────────────────────────────
+
+    @app.post("/groups/{gid}/votes/{vid}/close")
+    async def close_vote(
+        gid: str,
+        vid: str,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        try:
+            return vote_store.close_vote(vid, user["sub"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     return app
 

@@ -103,6 +103,8 @@ const App = {
     this._bindAdminBtn();
     this._loadLocation();
     this._loadFavourites();
+    document.getElementById("groups-btn").style.display = "inline-flex";
+    GroupsPanel.init();
   },
 
   // ── Admin users panel ─────────────────────────────────────────────────────
@@ -540,6 +542,18 @@ const App = {
       // Summary message
       this._addMsg("bot", `${searchTag}<br>找到 <strong>${data.restaurants.length}</strong> 間餐廳，地圖已更新 ✅`);
 
+      // Save results for sharing
+      this._lastSearchData = data;
+
+      // Share-to-group button
+      const shareEl = document.createElement("div");
+      shareEl.className = "msg bot";
+      shareEl.innerHTML = `<button id="share-results-btn">🗳 分享結果到群組發起投票</button>`;
+      shareEl.querySelector("#share-results-btn").addEventListener("click", () => {
+        GroupsPanel.openShareModal(data.restaurants, data.parsed_query);
+      });
+      document.getElementById("chat-messages").appendChild(shareEl);
+
       // Individual result cards
       const favSet = new Set(data.favourite_ids || []);
       data.restaurants.forEach((r, i) => {
@@ -643,3 +657,548 @@ const App = {
 };
 
 document.addEventListener("DOMContentLoaded", () => App.init());
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GroupsPanel — groups, invitations, chat, votes
+// ═══════════════════════════════════════════════════════════════════════════
+
+const GroupsPanel = {
+  _currentGroupId: null,
+  _currentGroup:   null,
+  _pollTimer:      null,
+  _lastMsgCount:   0,
+  _groups:         [],
+
+  init() {
+    const btn   = document.getElementById("groups-btn");
+    const panel = document.getElementById("groups-panel");
+
+    btn.addEventListener("click", () => {
+      if (panel.style.display === "none") this.open();
+      else this.close();
+    });
+
+    document.getElementById("gp-close").addEventListener("click", () => this.close());
+
+    // Invitation bar
+    document.getElementById("gp-inv-open").addEventListener("click", () => this._showView("inv"));
+    document.getElementById("gp-inv-back").addEventListener("click", () => this._showView("list"));
+
+    // Detail back
+    document.getElementById("gp-detail-back").addEventListener("click", () => {
+      this._stopPolling();
+      this._currentGroupId = null;
+      this._showView("list");
+      this._loadGroups();
+    });
+
+    // Tabs
+    document.querySelectorAll(".gp-tab").forEach(tab => {
+      tab.addEventListener("click", () => this._switchTab(tab.dataset.tab));
+    });
+
+    // Send message
+    document.getElementById("gp-msg-form").addEventListener("submit", e => {
+      e.preventDefault();
+      this._sendMessage();
+    });
+
+    // Invite
+    document.getElementById("gp-invite-btn").addEventListener("click", () => this._inviteUser());
+    document.getElementById("gp-invite-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); this._inviteUser(); }
+    });
+
+    // Create group
+    document.getElementById("gp-create-btn").addEventListener("click", () => this._promptCreateGroup());
+
+    // Share modal
+    document.getElementById("share-cancel").addEventListener("click", () => {
+      document.getElementById("share-overlay").style.display = "none";
+    });
+    document.getElementById("share-overlay").addEventListener("click", e => {
+      if (e.target === document.getElementById("share-overlay"))
+        document.getElementById("share-overlay").style.display = "none";
+    });
+    document.getElementById("share-submit").addEventListener("click", () => this._submitShare());
+  },
+
+  open() {
+    document.getElementById("groups-panel").style.display = "flex";
+    document.body.classList.add("groups-open");
+    this._showView("list");
+    this._loadGroups();
+    this._loadInvitations();
+  },
+
+  close() {
+    this._stopPolling();
+    document.getElementById("groups-panel").style.display = "none";
+    document.body.classList.remove("groups-open");
+    this._currentGroupId = null;
+  },
+
+  _showView(view) {
+    document.getElementById("gp-list-view").style.display   = view === "list"   ? "flex" : "none";
+    document.getElementById("gp-inv-view").style.display    = view === "inv"    ? "flex" : "none";
+    document.getElementById("gp-detail-view").style.display = view === "detail" ? "flex" : "none";
+
+    if (view === "list")   { document.getElementById("gp-list-view").style.flexDirection   = "column"; }
+    if (view === "inv")    { document.getElementById("gp-inv-view").style.flexDirection    = "column"; }
+    if (view === "detail") { document.getElementById("gp-detail-view").style.flexDirection = "column"; }
+  },
+
+  async _loadGroups() {
+    const body = document.getElementById("gp-list-body");
+    body.innerHTML = '<div class="spinner" style="margin:1.5rem auto"></div>';
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      this._groups = res.ok ? await res.json() : [];
+      if (!this._groups.length) {
+        body.innerHTML = '<p style="text-align:center;color:#aaa;padding:2rem;font-size:.85rem">尚無群組，點下方按鈕建立一個吧！</p>';
+        return;
+      }
+      body.innerHTML = this._groups.map(g => `
+        <div class="gp-group-row" data-gid="${this._esc(g.id)}">
+          <div class="gp-group-avatar">${this._esc(g.name.charAt(0))}</div>
+          <div class="gp-group-info">
+            <div class="gp-group-name">${this._esc(g.name)}</div>
+            <div class="gp-group-meta">${g.members.length} 位成員</div>
+          </div>
+        </div>`).join("");
+      body.querySelectorAll(".gp-group-row").forEach(row => {
+        row.addEventListener("click", () => this._enterGroup(row.dataset.gid));
+      });
+    } catch {
+      body.innerHTML = '<p style="color:#e74c3c;text-align:center;padding:1rem;font-size:.83rem">載入失敗</p>';
+    }
+  },
+
+  async _loadInvitations() {
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/invitations`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) return;
+      const invs = await res.json();
+      const badge = document.getElementById("inv-badge");
+      const bar   = document.getElementById("gp-invitations-bar");
+      if (invs.length) {
+        badge.textContent    = invs.length;
+        badge.style.display  = "inline-flex";
+        document.getElementById("gp-inv-count").textContent = invs.length;
+        bar.style.display    = "flex";
+      } else {
+        badge.style.display = "none";
+        bar.style.display   = "none";
+      }
+      // Render inv list
+      const invBody = document.getElementById("gp-inv-body");
+      if (!invs.length) {
+        invBody.innerHTML = '<p style="text-align:center;color:#aaa;padding:2rem;font-size:.85rem">沒有待接受的邀請</p>';
+        return;
+      }
+      invBody.innerHTML = invs.map(inv => `
+        <div class="gp-inv-row" data-iid="${this._esc(inv.id)}" data-gid="${this._esc(inv.group_id)}">
+          <div class="gp-inv-row-top">邀請您加入「${this._esc(inv.group_name)}」</div>
+          <div class="gp-inv-row-sub">由 ${this._esc(inv.from_user)} 邀請</div>
+          <div class="gp-inv-actions">
+            <button class="gp-inv-accept">✓ 接受</button>
+            <button class="gp-inv-decline">✕ 拒絕</button>
+          </div>
+        </div>`).join("");
+      invBody.querySelectorAll(".gp-inv-row").forEach(row => {
+        row.querySelector(".gp-inv-accept").addEventListener("click", () =>
+          this._respondInvitation(row.dataset.iid, "accept"));
+        row.querySelector(".gp-inv-decline").addEventListener("click", () =>
+          this._respondInvitation(row.dataset.iid, "decline"));
+      });
+    } catch {}
+  },
+
+  async _respondInvitation(invId, action) {
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/invitations/${invId}/${action}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "操作失敗");
+      await this._loadInvitations();
+      if (action === "accept") {
+        await this._loadGroups();
+        this._showView("list");
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  },
+
+  async _enterGroup(groupId) {
+    this._currentGroupId = groupId;
+    this._currentGroup   = this._groups.find(g => g.id === groupId) || null;
+
+    // Fetch fresh group data
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${groupId}`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (res.ok) this._currentGroup = await res.json();
+    } catch {}
+
+    document.getElementById("gp-detail-name").textContent =
+      this._currentGroup ? this._currentGroup.name : groupId;
+
+    this._showView("detail");
+    this._switchTab("chat");
+  },
+
+  _switchTab(tab) {
+    document.querySelectorAll(".gp-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+    document.getElementById("gp-tab-chat").style.display    = tab === "chat"    ? "flex" : "none";
+    document.getElementById("gp-tab-votes").style.display   = tab === "votes"   ? "flex" : "none";
+    document.getElementById("gp-tab-members").style.display = tab === "members" ? "flex" : "none";
+
+    this._stopPolling();
+    if (tab === "chat")    { this._fetchMessages(); this._startPolling(); }
+    if (tab === "votes")   { this._loadVotes(); }
+    if (tab === "members") { this._renderMembers(); }
+  },
+
+  // ── Chat ────────────────────────────────────────────────────────────────────
+
+  _startPolling() {
+    this._pollTimer = setInterval(() => this._fetchMessages(), 5000);
+  },
+  _stopPolling() {
+    if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+  },
+
+  async _fetchMessages() {
+    if (!this._currentGroupId) return;
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/messages`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) return;
+      const msgs = await res.json();
+      if (msgs.length === this._lastMsgCount) return;
+      this._lastMsgCount = msgs.length;
+
+      const me = this._getCurrentUsername();
+      const container = document.getElementById("gp-messages");
+      container.innerHTML = msgs.map(m => {
+        const isMine = m.user === me;
+        const time   = new Date(m.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+        return `<div class="gp-msg ${isMine ? "me" : "other"}">
+          ${!isMine ? `<div class="gp-msg-sender">${this._esc(m.user)}</div>` : ""}
+          <div class="gp-msg-bubble">${this._esc(m.text)}</div>
+          <div class="gp-msg-time">${time}</div>
+        </div>`;
+      }).join("");
+      container.scrollTop = container.scrollHeight;
+    } catch {}
+  },
+
+  async _sendMessage() {
+    const input = document.getElementById("gp-msg-input");
+    const text  = input.value.trim();
+    if (!text || !this._currentGroupId) return;
+    input.value = "";
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Auth.getToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "發送失敗");
+      this._lastMsgCount = 0; // force refresh
+      await this._fetchMessages();
+    } catch (err) {
+      input.value = text;
+      alert(err.message);
+    }
+  },
+
+  // ── Votes ──────────────────────────────────────────────────────────────────
+
+  async _loadVotes() {
+    const body = document.getElementById("gp-votes-body");
+    body.innerHTML = '<div class="spinner" style="margin:1.5rem auto"></div>';
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/votes`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) throw new Error();
+      const votes = await res.json();
+      this._renderVotes(votes);
+    } catch {
+      body.innerHTML = '<p style="color:#e74c3c;text-align:center">載入失敗</p>';
+    }
+  },
+
+  _renderVotes(votes) {
+    const body = document.getElementById("gp-votes-body");
+    const me   = this._getCurrentUsername();
+    if (!votes.length) {
+      body.innerHTML = '<p class="gp-no-votes">尚無投票，搜尋餐廳後可分享到此群組發起投票</p>';
+      return;
+    }
+    body.innerHTML = "";
+    votes.forEach(v => {
+      const totalVotes = Object.values(v.votes).reduce((a, b) => a + b.length, 0);
+      const statusLabel = v.status === "open"
+        ? '<span class="gp-vote-status">進行中</span>'
+        : '<span class="gp-vote-status closed">已結束</span>';
+      const isCreator = v.creator === me;
+
+      const optionsHtml = v.options.map(opt => {
+        const voters  = v.votes[opt.id] || [];
+        const voted   = voters.includes(me);
+        const pct     = totalVotes ? Math.round(voters.length / totalVotes * 100) : 0;
+        return `<div class="gp-vote-option${voted ? " voted" : ""}" data-vid="${this._esc(v.id)}" data-oid="${this._esc(opt.id)}">
+          <div class="gp-vote-bar" style="width:${pct}%"></div>
+          <div class="gp-vote-opt-text">
+            ${this._esc(opt.name)}
+            <div class="gp-vote-opt-sub">🚶 ${opt.walking_minutes}分鐘</div>
+          </div>
+          <div class="gp-vote-count">${voters.length} 票</div>
+        </div>`;
+      }).join("");
+
+      const closeBtn = (isCreator && v.status === "open")
+        ? `<button class="gp-vote-close-btn" data-vid="${this._esc(v.id)}">結束投票</button>`
+        : "";
+
+      const card = document.createElement("div");
+      card.className = "gp-vote-card";
+      card.innerHTML = `
+        <div class="gp-vote-title">${this._esc(v.title)} ${statusLabel}</div>
+        <div class="gp-vote-options">${optionsHtml}</div>
+        ${closeBtn}`;
+
+      if (v.status === "open") {
+        card.querySelectorAll(".gp-vote-option").forEach(el => {
+          el.addEventListener("click", () => this._castVote(el.dataset.vid, el.dataset.oid));
+        });
+      }
+      if (closeBtn) {
+        card.querySelector(".gp-vote-close-btn").addEventListener("click", e => {
+          e.stopPropagation();
+          this._closeVote(v.id);
+        });
+      }
+      body.appendChild(card);
+    });
+  },
+
+  async _castVote(voteId, optionId) {
+    try {
+      const res = await fetch(
+        `${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/votes/${voteId}/cast`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${Auth.getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ option_id: optionId }),
+        }
+      );
+      if (!res.ok) throw new Error((await res.json()).detail || "投票失敗");
+      await this._loadVotes();
+    } catch (err) { alert(err.message); }
+  },
+
+  async _closeVote(voteId) {
+    if (!confirm("確定要結束此投票嗎？")) return;
+    try {
+      const res = await fetch(
+        `${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/votes/${voteId}/close`,
+        { method: "POST", headers: { "Authorization": `Bearer ${Auth.getToken()}` } }
+      );
+      if (!res.ok) throw new Error((await res.json()).detail || "操作失敗");
+      await this._loadVotes();
+    } catch (err) { alert(err.message); }
+  },
+
+  // ── Members ────────────────────────────────────────────────────────────────
+
+  _renderMembers() {
+    const list = document.getElementById("gp-members-list");
+    const me   = this._getCurrentUsername();
+    if (!this._currentGroup) { list.innerHTML = ""; return; }
+    list.innerHTML = this._currentGroup.members.map(m => {
+      const isCreator = m === this._currentGroup.creator;
+      return `<div class="gp-member-row">
+        <div class="gp-member-avatar">${this._esc(m.charAt(0).toUpperCase())}</div>
+        <div class="gp-member-name">${this._esc(m)}${m === me ? " (我)" : ""}</div>
+        ${isCreator ? '<span class="gp-member-badge">建立者</span>' : ""}
+      </div>`;
+    }).join("");
+    document.getElementById("gp-invite-result").textContent = "";
+  },
+
+  async _inviteUser() {
+    const input  = document.getElementById("gp-invite-input");
+    const result = document.getElementById("gp-invite-result");
+    const target = input.value.trim();
+    if (!target) return;
+    result.textContent = "";
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/invite`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Auth.getToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: target }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "邀請失敗");
+      result.className = "ok";
+      result.textContent = `✓ 已送出邀請給「${target}」`;
+      input.value = "";
+    } catch (err) {
+      result.className = "err";
+      result.textContent = `✕ ${err.message}`;
+    }
+  },
+
+  // ── Create group ──────────────────────────────────────────────────────────
+
+  async _promptCreateGroup() {
+    const name = prompt("請輸入群組名稱（2–30 字元）：");
+    if (!name || !name.trim()) return;
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Auth.getToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "建立失敗");
+      const group = await res.json();
+      await this._loadGroups();
+      this._enterGroup(group.id);
+    } catch (err) {
+      alert(err.message);
+    }
+  },
+
+  // ── Share modal ───────────────────────────────────────────────────────────
+
+  openShareModal(restaurants, parsedQuery) {
+    if (!restaurants || !restaurants.length) {
+      alert("沒有可分享的搜尋結果");
+      return;
+    }
+    // Populate title
+    const titleInput = document.getElementById("share-title");
+    titleInput.value = parsedQuery
+      ? `${parsedQuery.raw_keyword || parsedQuery.food}（步行 ${parsedQuery.time} 分鐘內）`
+      : "今天吃什麼？";
+
+    // Populate group select
+    const sel = document.getElementById("share-group-select");
+    sel.innerHTML = "";
+    if (!this._groups.length) {
+      sel.innerHTML = '<option disabled>尚無群組，請先建立群組</option>';
+    } else {
+      this._groups.forEach(g => {
+        const opt = document.createElement("option");
+        opt.value       = g.id;
+        opt.textContent = g.name;
+        sel.appendChild(opt);
+      });
+    }
+
+    // Populate restaurant checkboxes
+    const optList = document.getElementById("share-options-list");
+    optList.innerHTML = restaurants.map(r => `
+      <label class="share-option-row">
+        <input type="checkbox" value="${this._esc(r.id)}" checked>
+        <div class="share-option-label">
+          <div class="share-option-name">${this._esc(r.name)}</div>
+          <div class="share-option-addr">📍 ${this._esc(r.address)} · 🚶 ${r.walking_minutes}分鐘</div>
+        </div>
+      </label>`).join("");
+
+    // Store reference for _submitShare
+    this._shareRestaurants = restaurants;
+    document.getElementById("share-error").textContent = "";
+    document.getElementById("share-overlay").style.display = "flex";
+  },
+
+  async _submitShare() {
+    const title   = document.getElementById("share-title").value.trim();
+    const groupId = document.getElementById("share-group-select").value;
+    const errEl   = document.getElementById("share-error");
+    errEl.textContent = "";
+
+    if (!title) { errEl.textContent = "請輸入投票標題"; return; }
+    if (!groupId) { errEl.textContent = "請選擇群組"; return; }
+
+    const checked = Array.from(
+      document.querySelectorAll("#share-options-list input[type=checkbox]:checked")
+    ).map(cb => cb.value);
+
+    if (checked.length < 2)  { errEl.textContent = "至少選擇 2 間餐廳"; return; }
+    if (checked.length > 8)  { errEl.textContent = "最多選擇 8 間餐廳"; return; }
+
+    const options = (this._shareRestaurants || [])
+      .filter(r => checked.includes(r.id))
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        address: r.address,
+        walking_minutes: r.walking_minutes,
+        latitude: r.latitude,
+        longitude: r.longitude,
+      }));
+
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${groupId}/votes`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Auth.getToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, options }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "分享失敗");
+      document.getElementById("share-overlay").style.display = "none";
+      // Open groups panel on the vote tab if group matches current
+      if (this._currentGroupId === groupId) {
+        this._switchTab("votes");
+      } else {
+        this.open();
+        setTimeout(() => this._enterGroup(groupId), 200);
+        setTimeout(() => this._switchTab("votes"), 500);
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+    }
+  },
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  _getCurrentUsername() {
+    const token = Auth.getToken();
+    if (!token) return "";
+    try {
+      return JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).sub || "";
+    } catch { return ""; }
+  },
+
+  _esc(str) {
+    return String(str)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  },
+};

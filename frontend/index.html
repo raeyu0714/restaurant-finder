@@ -31,6 +31,7 @@
       <button id="location-cancel-btn" class="toolbar-btn" style="padding:.3rem .5rem;opacity:.7;">✕</button>
     </div>
     <button id="relocate-btn" class="toolbar-btn" style="display:none" title="重新定位">📍 定位</button>
+    <button id="groups-btn"   class="toolbar-btn" style="display:none" title="群組">👪<span id="inv-badge" class="inv-badge" style="display:none">0</span></button>
     <button id="admin-btn"    class="toolbar-btn" style="display:none" title="用戶管理">👥 用戶</button>
     <button id="logout-btn"   class="toolbar-btn" style="display:none" title="登出">⎋ 登出</button>
   </div>
@@ -133,6 +134,91 @@
       <input id="chat-input" type="text" placeholder="輸入您的需求…" autocomplete="off">
       <button type="submit" id="send-btn">➤</button>
     </form>
+  </div>
+
+  <!-- Groups side panel -->
+  <div id="groups-panel" style="display:none">
+
+    <!-- VIEW 1: group list -->
+    <div id="gp-list-view">
+      <div id="gp-list-header">
+        <span>👪 我的群組</span>
+        <button id="gp-close">✕</button>
+      </div>
+      <div id="gp-invitations-bar" style="display:none">
+        🔔 <span id="gp-inv-count">0</span> 個待接受邀請
+        <button id="gp-inv-open">查看</button>
+      </div>
+      <div id="gp-list-body"></div>
+      <button id="gp-create-btn">＋ 建立新群組</button>
+    </div>
+
+    <!-- VIEW 2: invitations list -->
+    <div id="gp-inv-view" style="display:none">
+      <div id="gp-inv-header">
+        <button id="gp-inv-back">← 返回</button>
+        <span>待接受邀請</span>
+      </div>
+      <div id="gp-inv-body"></div>
+    </div>
+
+    <!-- VIEW 3: group detail (tabs) -->
+    <div id="gp-detail-view" style="display:none">
+      <div id="gp-detail-header">
+        <button id="gp-detail-back">←</button>
+        <span id="gp-detail-name"></span>
+      </div>
+      <div id="gp-tabs">
+        <button class="gp-tab active" data-tab="chat">💬 聊天</button>
+        <button class="gp-tab" data-tab="votes">🗳 投票</button>
+        <button class="gp-tab" data-tab="members">👥 成員</button>
+      </div>
+      <!-- Chat tab -->
+      <div id="gp-tab-chat" class="gp-tab-content">
+        <div id="gp-messages"></div>
+        <form id="gp-msg-form">
+          <input id="gp-msg-input" placeholder="輸入訊息…" autocomplete="off">
+          <button type="submit">➤</button>
+        </form>
+      </div>
+      <!-- Votes tab -->
+      <div id="gp-tab-votes" class="gp-tab-content" style="display:none">
+        <div id="gp-votes-body"></div>
+      </div>
+      <!-- Members tab -->
+      <div id="gp-tab-members" class="gp-tab-content" style="display:none">
+        <div id="gp-members-list"></div>
+        <div id="gp-invite-form">
+          <input id="gp-invite-input" placeholder="搜尋使用者名稱…" autocomplete="off">
+          <button id="gp-invite-btn">邀請</button>
+        </div>
+        <div id="gp-invite-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share-to-group modal -->
+  <div id="share-overlay" style="display:none">
+    <div id="share-modal">
+      <h3>🗳 分享到群組發起投票</h3>
+      <div class="share-field">
+        <label for="share-title">投票標題</label>
+        <input id="share-title" placeholder="例如：今天吃什麼？">
+      </div>
+      <div class="share-field">
+        <label for="share-group-select">選擇群組</label>
+        <select id="share-group-select"></select>
+      </div>
+      <div class="share-field">
+        <label>選擇餐廳（最多 8 間）</label>
+        <div id="share-options-list"></div>
+      </div>
+      <div id="share-error" class="error-text"></div>
+      <div id="share-modal-actions">
+        <button id="share-cancel">取消</button>
+        <button id="share-submit">發起投票</button>
+      </div>
+    </div>
   </div>
 
   <!-- Spin modal -->

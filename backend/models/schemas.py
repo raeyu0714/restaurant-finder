@@ -45,6 +45,36 @@ class FavouriteRequest(BaseModel):
     address: str
 
 
+class CreateGroupRequest(BaseModel):
+    name: str
+
+
+class InviteRequest(BaseModel):
+    username: str
+
+
+class SendMessageRequest(BaseModel):
+    text: str
+
+
+class VoteOption(BaseModel):
+    id: str
+    name: str
+    address: str
+    walking_minutes: float
+    latitude: float
+    longitude: float
+
+
+class CreateVoteRequest(BaseModel):
+    title: str
+    options: list[VoteOption]
+
+
+class CastVoteRequest(BaseModel):
+    option_id: str
+
+
 class SearchResponse(BaseModel):
     restaurants: list[Restaurant]
     parsed_query: ParsedQuery
