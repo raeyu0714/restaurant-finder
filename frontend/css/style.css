@@ -474,7 +474,7 @@ body.chat-open #map-container {
     width: 100%;
     top: auto;
     bottom: 0;
-    height: 72vh;
+    height: 50vh;
     border-left: none;
     border-top: 1px solid #dde3ea;
     border-radius: 18px 18px 0 0;
@@ -486,7 +486,7 @@ body.chat-open #map-container {
     to   { transform: translateY(0);    opacity: 1; }
   }
   /* Map shrinks upward when sheet is open */
-  body.chat-open #map-container { right: 0; bottom: 72vh; }
+  body.chat-open #map-container { right: 0; bottom: 50vh; }
 
   /* Toolbar */
   #location-display { display: none !important; }
