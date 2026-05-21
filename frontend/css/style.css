@@ -185,18 +185,18 @@ body.chat-open #map-container {
   position: fixed;
   bottom: calc(1.8rem + 60px + 0.8rem);
   right: 1.8rem;
-  width: 50px; height: 50px;
+  width: 60px; height: 60px;
   border-radius: 50%;
   background: #e67e22;
   color: #fff; border: none;
-  font-size: 1.4rem;
-  box-shadow: 0 4px 16px rgba(230,126,34,.55);
+  font-size: 1.6rem;
+  box-shadow: 0 4px 20px rgba(230,126,34,.55);
   cursor: pointer;
   z-index: 300;
   transition: transform .2s, background .2s;
   display: flex; align-items: center; justify-content: center;
 }
-#spin-btn:hover { transform: scale(1.12) rotate(20deg); background: #d35400; }
+#spin-btn:hover { transform: scale(1.1) rotate(20deg); background: #d35400; }
 
 /* ── Chat toggle button ──────────────────────────────────── */
 #chat-toggle {
@@ -437,9 +437,6 @@ body.chat-open #map-container {
   to   { box-shadow: 0 0 0 8px rgba(231,76,60,0); }
 }
 #spin-result { width: 100%; display: flex; flex-direction: column; gap: .55rem; }
-#spin-result-text {
-  font-size: .85rem; color: #666; font-style: italic;
-}
 #spin-confirm-btn {
   width: 100%; padding: .65rem;
   background: #27ae60; color: #fff;
@@ -463,9 +460,45 @@ body.chat-open #map-container {
 #spin-cancel-btn:hover { color: #e74c3c; }
 
 /* ── Responsive ──────────────────────────────────────────── */
+
+/* Tablet (641–1024px) */
+@media (max-width: 1024px) {
+  #chat-panel { width: 55%; }
+  body.chat-open #map-container { right: 55%; }
+}
+
+/* Mobile (≤640px) */
 @media (max-width: 640px) {
+  /* Map */
   #chat-panel { width: 100%; top: 48px; }
   body.chat-open #map-container { right: 100%; }
-  #chat-toggle { bottom: 1.2rem; right: 1.2rem; }
-  #spin-btn { bottom: calc(1.2rem + 60px + 0.7rem); right: 1.2rem; }
+
+  /* Toolbar: hide location label to save space, shrink buttons */
+  #location-display { display: none !important; }
+  #toolbar { gap: .5rem; padding: 0 .6rem; }
+  #toolbar-title { font-size: .88rem; }
+  .toolbar-btn { padding: .28rem .55rem; font-size: .78rem; }
+  #location-input { width: 150px; font-size: .78rem; }
+
+  /* Login modal */
+  #login-modal { width: min(340px, 90vw); padding: 1.6rem 1.4rem; }
+
+  /* Floating buttons */
+  #chat-toggle { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
+  #spin-btn    { bottom: calc(1.2rem + 54px + 0.7rem); right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
+
+  /* Favourites sidebar: full width overlay on mobile */
+  #fav-sidebar { width: 85vw; }
+  #fav-content { width: 85vw; }
+
+  /* Spin modal */
+  #spin-modal { width: min(300px, 88vw); padding: 1.5rem 1.2rem; }
+  #spin-slot  { width: 140px; height: 115px; }
+  #spin-emoji { font-size: 2.7rem; }
+  #spin-label { font-size: 1rem; }
+
+  /* Chat messages: slightly smaller text */
+  .msg-bubble   { font-size: .84rem; }
+  .result-card  { font-size: .8rem; }
+  #chat-input   { font-size: .85rem; }
 }

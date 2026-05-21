@@ -320,7 +320,6 @@ const App = {
         emojiEl.textContent = apiData.emoji;
         labelEl.textContent = apiData.label;
         this._spinResult = apiData;
-        document.getElementById("spin-result-text").textContent = apiData.hint;
         resultEl.style.display = "flex";
         return;
       }
