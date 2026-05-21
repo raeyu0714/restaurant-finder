@@ -31,7 +31,21 @@
       <button id="location-cancel-btn" class="toolbar-btn" style="padding:.3rem .5rem;opacity:.7;">✕</button>
     </div>
     <button id="relocate-btn" class="toolbar-btn" style="display:none" title="重新定位">📍 定位</button>
+    <button id="admin-btn"    class="toolbar-btn" style="display:none" title="用戶管理">👥 用戶</button>
     <button id="logout-btn"   class="toolbar-btn" style="display:none" title="登出">⎋ 登出</button>
+  </div>
+
+  <!-- Admin users modal -->
+  <div id="admin-overlay" style="display:none">
+    <div id="admin-modal">
+      <div id="admin-header">
+        <span>👥 已註冊用戶</span>
+        <button id="admin-close">✕</button>
+      </div>
+      <div id="admin-body">
+        <div class="spinner" style="margin:1.5rem auto"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Login / Register modal (shown until authenticated) -->

@@ -131,6 +131,14 @@ def create_app() -> FastAPI:
     async def get_public_key():
         return {"public_key_pem": settings.RSA_PUBLIC_KEY_PEM}
 
+    # ── GET /admin/users ────────────────────────────────────────────────────
+
+    @app.get("/admin/users")
+    async def admin_users(user: dict = Depends(get_current_user)):
+        if user["sub"] != settings.DEMO_USERNAME:
+            raise HTTPException(status_code=403, detail="僅限管理員存取")
+        return user_store.list_users()
+
     # ── POST /register ───────────────────────────────────────────────────────
 
     @app.post("/register", status_code=201)

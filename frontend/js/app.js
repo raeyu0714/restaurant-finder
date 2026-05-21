@@ -94,14 +94,66 @@ const App = {
     document.getElementById("logout-btn").style.display     = "inline-flex";
     document.getElementById("chat-toggle").style.display    = "flex";
     document.getElementById("spin-btn").style.display       = "flex";
-    document.getElementById("relocate-btn").style.display     = "inline-flex";
+    document.getElementById("relocate-btn").style.display   = "inline-flex";
     document.getElementById("location-display").style.display = "inline";
     this._bindRelocate();
     this._bindChat();
     this._bindSpinBtn();
     this._bindFavSidebar();
+    this._bindAdminBtn();
     this._loadLocation();
     this._loadFavourites();
+  },
+
+  // ── Admin users panel ─────────────────────────────────────────────────────
+
+  _bindAdminBtn() {
+    const btn     = document.getElementById("admin-btn");
+    const overlay = document.getElementById("admin-overlay");
+    const closeBtn = document.getElementById("admin-close");
+
+    // Only show admin button for the demo/admin account
+    const token = Auth.getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        if (payload.sub === "demo") btn.style.display = "inline-flex";
+      } catch {}
+    }
+
+    btn.addEventListener("click", async () => {
+      overlay.style.display = "flex";
+      const body = document.getElementById("admin-body");
+      body.innerHTML = '<div class="spinner" style="margin:1.5rem auto"></div>';
+      try {
+        const res = await fetch(`${CONFIG.BACKEND_URL}/admin/users`, {
+          headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || "存取失敗");
+        const users = await res.json();
+        if (!users.length) {
+          body.innerHTML = '<p class="admin-empty">尚無已註冊用戶</p>';
+          return;
+        }
+        body.innerHTML = users.map(u => {
+          const initial = u.username.charAt(0).toUpperCase();
+          const date = new Date(u.created_at).toLocaleString("zh-TW", {
+            year:"numeric", month:"2-digit", day:"2-digit",
+            hour:"2-digit", minute:"2-digit",
+          });
+          return `<div class="admin-user-row">
+            <div class="admin-avatar">${initial}</div>
+            <span class="admin-username">${u.username}</span>
+            <span class="admin-date">${date}</span>
+          </div>`;
+        }).join("");
+      } catch (err) {
+        body.innerHTML = `<p class="admin-empty" style="color:#e74c3c">${err.message}</p>`;
+      }
+    });
+
+    closeBtn.addEventListener("click", () => overlay.style.display = "none");
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.style.display = "none"; });
   },
 
   // ── Location + base map ───────────────────────────────────────────────────

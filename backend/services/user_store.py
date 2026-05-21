@@ -55,6 +55,17 @@ def verify_user(username: str, password: str) -> bool:
         return _pwd.verify(password, user["password_hash"])
 
 
+def list_users() -> list[dict]:
+    """Returns all users without password hashes, sorted by created_at."""
+    with _lock:
+        data = _load()
+        users = [
+            {"id": u["id"], "username": u["username"], "created_at": u["created_at"]}
+            for u in data.values()
+        ]
+        return sorted(users, key=lambda u: u["created_at"])
+
+
 def get_user(username: str) -> dict | None:
     with _lock:
         data = _load()
