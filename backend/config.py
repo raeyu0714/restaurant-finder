@@ -28,7 +28,8 @@ class Settings:
         os.environ.get("CORS_ORIGINS", '["http://localhost:3000","http://127.0.0.1:3000"]')
     )
 
-    GOOGLE_MAPS_API_KEY: str = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    GOOGLE_MAPS_API_KEY: str    = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    OUTSCRAPER_API_KEY: str     = os.environ.get("OUTSCRAPER_API_KEY", "")
 
     NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
     OSRM_BASE_URL: str      = "https://router.project-osrm.org"
