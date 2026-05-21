@@ -146,45 +146,70 @@ def create_app() -> FastAPI:
         req: SearchRequest,
         user: dict = Depends(get_current_user),
     ):
-        """Runs the full search pipeline and returns intermediate data at each step."""
+        """Runs the full search pipeline and returns intermediate data at each step,
+        including raw_request and raw_response for each external call."""
         if user["sub"] != settings.DEMO_USERNAME:
             raise HTTPException(status_code=403, detail="僅限管理員使用")
 
         client: httpx.AsyncClient = app.state.http_client
         steps = []
 
-        # Step 1 — JWT
-        from jose import jwt as jose_jwt
-        token_payload = jose_jwt.get_unverified_claims(
-            user.get("_raw_token", "")
-        ) if user.get("_raw_token") else {"sub": user["sub"]}
+        # ── Step 1: JWT ──────────────────────────────────────────────────────
         steps.append({
             "id": "jwt", "emoji": "🔐", "title": "JWT 驗證",
             "description": "後端收到 Authorization header，用 HMAC-SHA256 驗證 Token 合法性",
-            "data": {
-                "username": user["sub"],
-                "algorithm": settings.JWT_ALGORITHM,
-                "status": "✅ 驗證通過",
-            },
+            "raw_request": (
+                f"POST /demo/trace HTTP/1.1\n"
+                f"Host: {settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else 'backend'}\n"
+                f"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.<payload>.<sig>\n"
+                f"Content-Type: application/json\n\n"
+                f"{{\n"
+                f'  "query": "{req.query}",\n'
+                f'  "latitude": {req.latitude},\n'
+                f'  "longitude": {req.longitude},\n'
+                f'  "use_google": {str(req.use_google).lower()}\n'
+                f"}}"
+            ),
+            "raw_response": (
+                f"{{\n"
+                f'  "sub": "{user["sub"]}",\n'
+                f'  "algorithm": "{settings.JWT_ALGORITHM}",\n'
+                f'  "status": "✅ 驗證通過"\n'
+                f"}}"
+            ),
         })
 
-        # Step 2 — NLP
+        # ── Step 2: NLP ──────────────────────────────────────────────────────
+        import json as _json
         nlp_result = predict(req.query)
         parsed = ParsedQuery(**nlp_result)
         steps.append({
             "id": "nlp", "emoji": "🧠", "title": "NLP 解析",
             "description": "jieba 斷詞 → TF-IDF 特徵 → SVM 分類，解析查詢意圖與食物類型",
-            "data": {
-                "input": req.query,
-                "intent": parsed.intent,
-                "food": parsed.food,
-                "raw_keyword": parsed.raw_keyword,
-                "max_time": f"{parsed.time} 分鐘",
-                "meal": parsed.meal or "未指定",
-            },
+            "raw_request": (
+                f"# Python 內部呼叫 (無 HTTP)\n"
+                f"predict(text=\"{req.query}\")\n\n"
+                f"# 斷詞結果 (jieba)\n"
+                f"tokens = {list(__import__('jieba').cut(req.query))}"
+            ),
+            "raw_response": _json.dumps(nlp_result, ensure_ascii=False, indent=2),
         })
 
-        # Step 3 — Nominatim
+        # ── Step 3: Nominatim ────────────────────────────────────────────────
+        radius_m = int(parsed.time * 80)
+        viewbox = (
+            f"{req.longitude - 0.05},{req.latitude + 0.05},"
+            f"{req.longitude + 0.05},{req.latitude - 0.05}"
+        )
+        nom_url = (
+            f"GET https://nominatim.openstreetmap.org/search\n"
+            f"  ?q={parsed.raw_keyword or parsed.food}+restaurant\n"
+            f"  &format=jsonv2\n"
+            f"  &limit=20\n"
+            f"  &viewbox={viewbox}\n"
+            f"  &bounded=1\n"
+            f"  &addressdetails=1"
+        )
         raw_places = await nom_service.search_restaurants(
             lat=req.latitude, lon=req.longitude,
             food=parsed.food, keywords=parsed.keywords,
@@ -201,53 +226,76 @@ def create_app() -> FastAPI:
                 api_key=settings.GOOGLE_MAPS_API_KEY,
             )
             raw_places = _merge_places(raw_places, google_results)
+
+        sample_names = [
+            nom_service.parse_place(p)["name"] if p.get("osm_type") != "google"
+            else (p.get("displayName") or {}).get("text", p.get("name", ""))
+            for p in raw_places[:3]
+        ]
+        nom_response = _json.dumps([
+            {
+                "place_id": p.get("place_id", "google"),
+                "display_name": nom_service.parse_place(p)["name"] if p.get("osm_type") != "google"
+                    else (p.get("displayName") or {}).get("text", ""),
+                "lat": str(p.get("lat", "")),
+                "lon": str(p.get("lon", "")),
+            }
+            for p in raw_places[:3]
+        ], ensure_ascii=False, indent=2) + f"\n// ... 共 {len(raw_places)} 筆"
+
         steps.append({
             "id": "nominatim", "emoji": "🗺", "title": "Nominatim 搜尋",
             "description": "向 OpenStreetMap Nominatim API 搜尋附近符合條件的地點",
-            "data": {
-                "search_term": parsed.raw_keyword or parsed.food,
-                "nominatim_results": nom_count,
-                "after_merge": len(raw_places),
-                "google_mode": req.use_google,
-                "sample_names": [
-                    nom_service.parse_place(p)["name"] if p.get("osm_type") != "google"
-                    else (p.get("displayName") or {}).get("text", p.get("name", ""))
-                    for p in raw_places[:4]
-                ],
-            },
+            "raw_request": nom_url,
+            "raw_response": nom_response,
         })
 
         if not raw_places:
-            steps.append({"id": "osrm",  "emoji": "🚶", "title": "OSRM 步行過濾",  "description": "", "data": {"error": "Nominatim 沒有找到任何地點"}})
-            steps.append({"id": "folium","emoji": "🗺",  "title": "Folium 地圖",    "description": "", "data": {"error": "無資料"}})
-            steps.append({"id": "rsa",   "emoji": "🔏",  "title": "RSA 簽名",       "description": "", "data": {"error": "無資料"}})
+            for sid, emoji, title in [
+                ("osrm","🚶","OSRM 步行過濾"),("folium","🗺","Folium 地圖"),("rsa","🔏","RSA 簽名")
+            ]:
+                steps.append({"id":sid,"emoji":emoji,"title":title,"description":"",
+                               "raw_request":"（無資料）","raw_response":"（無資料）"})
             return {"steps": steps}
 
         places = [_parse_place(p) for p in raw_places]
 
-        # Step 4 — OSRM
+        # ── Step 4: OSRM ─────────────────────────────────────────────────────
         destinations = [(p["lat"], p["lon"]) for p in places]
+        coord_str = ";".join(
+            f"{req.longitude},{req.latitude}" if i == 0 else f"{lon},{lat}"
+            for i, (lat, lon) in enumerate([(req.latitude, req.longitude)] + destinations[:4])
+        )
+        osrm_url = (
+            f"GET https://router.project-osrm.org/table/v1/foot/\n"
+            f"  {coord_str}…\n"
+            f"  ?sources=0&annotations=duration"
+        )
         walking_minutes = await osrm_service.get_walking_times(
             req.latitude, req.longitude, destinations, client
         )
         filtered = [(p, w) for p, w in zip(places, walking_minutes) if w <= parsed.time]
+        osrm_response = _json.dumps({
+            "code": "Ok",
+            "durations": [[round(w * 60, 0) for _, w in zip(places[:5], walking_minutes[:5])]],
+            "# note": "秒數 ÷ 60 = 步行分鐘",
+            "kept_after_filter": [
+                {"name": p["name"], "walking_minutes": round(w, 1)}
+                for p, w in filtered[:4]
+            ],
+        }, ensure_ascii=False, indent=2)
+
         steps.append({
             "id": "osrm", "emoji": "🚶", "title": "OSRM 步行過濾",
             "description": "向 OSRM 路由引擎查詢每間餐廳的實際步行時間，過濾超過時限的",
-            "data": {
-                "candidates": len(places),
-                "time_limit": f"{parsed.time} 分鐘",
-                "kept": len(filtered),
-                "restaurants": [
-                    {"name": p["name"], "walking_minutes": round(w, 1)}
-                    for p, w in filtered[:5]
-                ],
-            },
+            "raw_request": osrm_url,
+            "raw_response": osrm_response,
         })
 
         if not filtered:
-            steps.append({"id": "folium","emoji": "🗺",  "title": "Folium 地圖",  "description": "", "data": {"error": "步行時間內無符合餐廳"}})
-            steps.append({"id": "rsa",   "emoji": "🔏",  "title": "RSA 簽名",     "description": "", "data": {"error": "無資料"}})
+            for sid, emoji, title in [("folium","🗺","Folium 地圖"),("rsa","🔏","RSA 簽名")]:
+                steps.append({"id":sid,"emoji":emoji,"title":title,"description":"",
+                               "raw_request":"（無資料）","raw_response":"（無資料）"})
             return {"steps": steps}
 
         restaurants: list[Restaurant] = [
@@ -260,39 +308,74 @@ def create_app() -> FastAPI:
             for p, w in filtered
         ]
 
-        # Step 5 — Folium
+        # ── Step 5: Folium ────────────────────────────────────────────────────
         reasons = _generate_reasons(restaurants, parsed)
         map_html = build_map(
             user_lat=req.latitude, user_lon=req.longitude,
             restaurants=restaurants, routes={}, reasons=reasons,
             parsed_query=parsed, fav_ids=set(),
         )
+        folium_request = (
+            f"# Python 內部呼叫 (無 HTTP)\n"
+            f"build_map(\n"
+            f"  user_lat={req.latitude}, user_lon={req.longitude},\n"
+            f"  restaurants=[{len(restaurants)} 間],\n"
+            f"  tiles='OpenStreetMap'\n"
+            f")"
+        )
+        folium_response = (
+            f"# 回傳 HTML 字串 ({round(len(map_html)/1024,1)} KB)\n"
+            f'<iframe srcdoc="<!DOCTYPE html>\\n'
+            f'  <html>\\n'
+            f'    <head>\\n'
+            f'      <script src=\\"leaflet.js\\"></script>\\n'
+            f'      ...\\n'
+            f'    </head>\\n'
+            f'    <body>\\n'
+            f'      <div id=\\"map\\"></div>\\n'
+            f'      <script>\\n'
+            f'        var map = L.map(\\"map\\")...\\n'
+            f'        // {len(restaurants)} markers added\\n'
+            f'      </script>\\n'
+            f'    </body>\\n'
+            f'  </html>" />'
+        )
         steps.append({
             "id": "folium", "emoji": "🗺", "title": "Folium 地圖",
             "description": "Python Folium 在伺服器端產生完整的 Leaflet 互動地圖 HTML",
-            "data": {
-                "markers": len(restaurants),
-                "map_size_kb": round(len(map_html) / 1024, 1),
-                "library": "folium (Python) → Leaflet.js",
-                "tiles": "OpenStreetMap",
-            },
+            "raw_request": folium_request,
+            "raw_response": folium_response,
         })
 
-        # Step 6 — RSA sign
+        # ── Step 6: RSA sign ──────────────────────────────────────────────────
         timestamp  = datetime.now(timezone.utc).isoformat()
         signed_str = build_signed_data(restaurants, parsed, timestamp)
         signature  = sign(signed_str, settings.RSA_PRIVATE_KEY_PEM)
         verified   = verify(signed_str, signature, settings.RSA_PUBLIC_KEY_PEM)
+        rsa_request = (
+            f"# Python 內部呼叫\n"
+            f"sign(\n"
+            f'  data=\'{signed_str[:120]}…\',\n'
+            f"  private_key=RSA_PRIVATE_KEY_PEM\n"
+            f")\n\n"
+            f"# 演算法\n"
+            f"padding.PSS(\n"
+            f"  mgf=MGF1(SHA256()),\n"
+            f"  salt_length=32\n"
+            f"), hashes.SHA256()"
+        )
+        rsa_response = _json.dumps({
+            "signature": signature[:60] + "…（base64）",
+            "length_bytes": len(__import__('base64').b64decode(signature)),
+            "verified_by_public_key": "✅ 通過" if verified else "❌ 失敗",
+            "frontend_verify": "window.crypto.subtle.verify({name:'RSA-PSS', saltLength:32}, publicKey, sig, data)",
+        }, ensure_ascii=False, indent=2)
+
         steps.append({
             "id": "rsa", "emoji": "🔏", "title": "RSA-PSS SHA-256 簽名",
             "description": "後端用 RSA 私鑰簽名，前端用公鑰驗章，確保資料未被竄改",
-            "data": {
-                "algorithm": "RSA-PSS + SHA-256",
-                "salt_length": 32,
-                "signed_fields": ["restaurants", "parsed_query", "timestamp"],
-                "signature_preview": signature[:40] + "…",
-                "verified": "✅ 驗證成功" if verified else "❌ 驗證失敗",
-            },
+            "raw_request": rsa_request,
+            "raw_response": rsa_response,
         })
 
         return {"steps": steps}

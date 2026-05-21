@@ -251,14 +251,15 @@ const App = {
     }
   },
 
+  _demoActiveTab: "request",
+
   _demoRender() {
     const steps = this._demoSteps;
     const idx   = this._demoIndex;
     const step  = steps[idx];
 
     // dots
-    const dotsEl = document.getElementById("demo-dots");
-    dotsEl.innerHTML = steps.map((_, i) =>
+    document.getElementById("demo-dots").innerHTML = steps.map((_, i) =>
       `<div class="demo-dot ${i < idx ? "done" : i === idx ? "active" : ""}"></div>`
     ).join("");
 
@@ -266,10 +267,21 @@ const App = {
     document.getElementById("demo-step-emoji").textContent   = step.emoji;
     document.getElementById("demo-step-title").textContent   = step.title;
     document.getElementById("demo-step-desc").textContent    = step.description;
-    document.getElementById("demo-step-data").textContent    = JSON.stringify(step.data, null, 2);
+
+    this._demoShowTab(this._demoActiveTab);
 
     document.getElementById("demo-prev-btn").disabled = idx === 0;
     document.getElementById("demo-next-btn").disabled = idx === steps.length - 1;
+  },
+
+  _demoShowTab(tab) {
+    this._demoActiveTab = tab;
+    const step = this._demoSteps[this._demoIndex];
+    document.getElementById("demo-raw-content").textContent =
+      tab === "request" ? (step.raw_request || "") : (step.raw_response || "");
+    document.querySelectorAll(".demo-tab").forEach(btn =>
+      btn.classList.toggle("active", btn.dataset.tab === tab)
+    );
   },
 
   _demoBindNav() {
@@ -279,6 +291,9 @@ const App = {
     document.getElementById("demo-next-btn").onclick = () => {
       if (this._demoIndex < this._demoSteps.length - 1) { this._demoIndex++; this._demoRender(); }
     };
+    document.querySelectorAll(".demo-tab").forEach(btn =>
+      btn.onclick = () => this._demoShowTab(btn.dataset.tab)
+    );
     const autoBtn = document.getElementById("demo-auto-btn");
     autoBtn.onclick = () => {
       if (this._demoTimer) {
