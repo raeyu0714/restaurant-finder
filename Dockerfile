@@ -15,4 +15,4 @@ RUN python -m backend.nlp.train
 
 EXPOSE 8000
 
-CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+CMD sh -c 'echo "Starting on PORT=$PORT" && exec uvicorn backend.main:app --host 0.0.0.0 --port "${PORT:-10000}" --log-level info'
