@@ -467,7 +467,12 @@ def create_app() -> FastAPI:
 
     # ── Group helpers ─────────────────────────────────────────────────────────
 
+    def _is_admin(username: str) -> bool:
+        return username == settings.DEMO_USERNAME
+
     def _assert_member(group: dict, username: str) -> None:
+        if _is_admin(username):
+            return
         if username not in group["members"]:
             raise HTTPException(status_code=403, detail="您不是此群組成員")
 
@@ -478,12 +483,23 @@ def create_app() -> FastAPI:
         name = req.name.strip()
         if len(name) < 2 or len(name) > 30:
             raise HTTPException(status_code=400, detail="群組名稱須為 2–30 個字元")
-        return group_store.create_group(name, user["sub"])
+        group = group_store.create_group(name, user["sub"])
+        # Auto-add admin to every group unless they are the creator
+        admin = settings.DEMO_USERNAME
+        if admin and user["sub"] != admin:
+            try:
+                group_store.add_member(group["id"], admin)
+                group = group_store.get_group(group["id"])
+            except ValueError:
+                pass
+        return group
 
     # ── GET /groups ───────────────────────────────────────────────────────────
 
     @app.get("/groups")
     async def list_groups(user: dict = Depends(get_current_user)):
+        if _is_admin(user["sub"]):
+            return group_store.list_all_groups()
         return group_store.list_groups_for_user(user["sub"])
 
     # ── GET /groups/{gid} ─────────────────────────────────────────────────────
@@ -493,7 +509,7 @@ def create_app() -> FastAPI:
         group = group_store.get_group(gid)
         if not group:
             raise HTTPException(status_code=404, detail="群組不存在")
-        _assert_member(group, user["sub"])
+        _assert_member(group, user["sub"])  # admin bypasses check
         return group
 
     # ── DELETE /groups/{gid} ──────────────────────────────────────────────────
@@ -503,8 +519,8 @@ def create_app() -> FastAPI:
         group = group_store.get_group(gid)
         if not group:
             raise HTTPException(status_code=404, detail="群組不存在")
-        if group["creator"] != user["sub"]:
-            raise HTTPException(status_code=403, detail="只有群組建立者可以刪除群組")
+        if group["creator"] != user["sub"] and not _is_admin(user["sub"]):
+            raise HTTPException(status_code=403, detail="只有群組建立者或管理員可以刪除群組")
         group_store.delete_group(gid)
         return {"status": "ok"}
 
@@ -649,7 +665,16 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="群組不存在")
         _assert_member(group, user["sub"])
         try:
-            return vote_store.close_vote(vid, user["sub"])
+            # Admin can close any vote regardless of creator
+            closer = user["sub"] if not _is_admin(user["sub"]) else None
+            vote = vote_store.get_vote(vid)
+            if not vote:
+                raise HTTPException(status_code=404, detail="投票不存在")
+            if closer and vote["creator"] != closer:
+                raise HTTPException(status_code=403, detail="只有投票建立者或管理員可以結束投票")
+            return vote_store.close_vote(vid, vote["creator"])
+        except HTTPException:
+            raise
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 

@@ -48,6 +48,11 @@ def list_groups_for_user(username: str) -> list[dict]:
         return [g for g in data.values() if username in g["members"]]
 
 
+def list_all_groups() -> list[dict]:
+    with _lock:
+        return list(_load().values())
+
+
 def add_member(group_id: str, username: str) -> None:
     with _lock:
         data = _load()

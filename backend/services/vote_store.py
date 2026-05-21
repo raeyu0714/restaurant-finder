@@ -100,6 +100,11 @@ def _cast_vote_toggle(vote_id: str, username: str, option_id: str) -> dict:
 cast_vote = _cast_vote_toggle
 
 
+def get_vote(vote_id: str) -> dict | None:
+    with _lock:
+        return _load().get(vote_id)
+
+
 def list_votes(group_id: str) -> list[dict]:
     with _lock:
         data = _load()
