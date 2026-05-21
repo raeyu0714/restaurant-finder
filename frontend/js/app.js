@@ -708,6 +708,9 @@ const GroupsPanel = {
       this._loadGroups();
     });
 
+    // Delete group
+    document.getElementById("gp-delete-btn").addEventListener("click", () => this._deleteGroup());
+
     // Tabs
     document.querySelectorAll(".gp-tab").forEach(tab => {
       tab.addEventListener("click", () => this._switchTab(tab.dataset.tab));
@@ -870,6 +873,12 @@ const GroupsPanel = {
     document.getElementById("gp-detail-name").textContent =
       this._currentGroup ? this._currentGroup.name : groupId;
 
+    const me = this._getCurrentUsername();
+    const isAdmin = me === "demo";
+    const isCreator = this._currentGroup && this._currentGroup.creator === me;
+    document.getElementById("gp-delete-btn").style.display =
+      (isAdmin || isCreator) ? "inline-flex" : "none";
+
     this._showView("detail");
     this._switchTab("chat");
   },
@@ -981,7 +990,8 @@ const GroupsPanel = {
 
   _renderVotes(votes) {
     const body = document.getElementById("gp-votes-body");
-    const me   = this._getCurrentUsername();
+    const me      = this._getCurrentUsername();
+    const isAdmin = me === "demo";
     if (!votes.length) {
       body.innerHTML = '<p class="gp-no-votes">尚無投票，搜尋餐廳後可分享到此群組發起投票</p>';
       return;
@@ -1008,7 +1018,7 @@ const GroupsPanel = {
         </div>`;
       }).join("");
 
-      const closeBtn = (isCreator && v.status === "open")
+      const closeBtn = ((isCreator || isAdmin) && v.status === "open")
         ? `<button class="gp-vote-close-btn" data-vid="${this._esc(v.id)}">結束投票</button>`
         : "";
 
@@ -1141,6 +1151,24 @@ const GroupsPanel = {
       const group = await res.json();
       await this._loadGroups();
       this._enterGroup(group.id);
+    } catch (err) {
+      alert(err.message);
+    }
+  },
+
+  async _deleteGroup() {
+    const name = this._currentGroup ? this._currentGroup.name : "此群組";
+    if (!confirm(`確定要刪除「${name}」嗎？此操作無法復原。`)) return;
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "刪除失敗");
+      this._stopPolling();
+      this._currentGroupId = null;
+      this._showView("list");
+      this._loadGroups();
     } catch (err) {
       alert(err.message);
     }
