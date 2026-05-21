@@ -66,6 +66,57 @@ def create_app() -> FastAPI:
 
     get_current_user = make_auth_dependency(settings.JWT_SECRET_KEY, settings.JWT_ALGORITHM)
 
+    # ── GET /spin ────────────────────────────────────────────────────────────
+
+    @app.get("/spin")
+    async def spin_food(_user: dict = Depends(get_current_user)):
+        import random
+        from datetime import datetime, timezone, timedelta
+
+        # All options pool
+        all_options = [
+            {"label": "拉麵",     "emoji": "🍜", "query": "我想吃拉麵"},
+            {"label": "壽司",     "emoji": "🍣", "query": "我想吃壽司"},
+            {"label": "火鍋",     "emoji": "🫕", "query": "我想吃火鍋"},
+            {"label": "炸雞",     "emoji": "🍗", "query": "我想吃炸雞"},
+            {"label": "牛排",     "emoji": "🥩", "query": "我想吃牛排"},
+            {"label": "漢堡",     "emoji": "🍔", "query": "我想吃漢堡"},
+            {"label": "披薩",     "emoji": "🍕", "query": "我想吃披薩"},
+            {"label": "甜點",     "emoji": "🍰", "query": "附近的甜點店"},
+            {"label": "咖啡廳",   "emoji": "☕",  "query": "附近的咖啡廳"},
+            {"label": "韓式料理", "emoji": "🥘", "query": "我想吃韓式料理"},
+            {"label": "台式便當", "emoji": "🍱", "query": "我想吃台式便當"},
+            {"label": "早午餐",   "emoji": "🥞", "query": "附近的早午餐"},
+            {"label": "珍珠奶茶", "emoji": "🧋", "query": "我想喝珍珠奶茶"},
+            {"label": "義大利麵", "emoji": "🍝", "query": "我想吃義大利麵"},
+            {"label": "烤肉",     "emoji": "🔥", "query": "我想吃烤肉"},
+            {"label": "鍋貼",     "emoji": "🥟", "query": "我想吃鍋貼"},
+        ]
+
+        # Time-of-day weights (Taiwan time = UTC+8)
+        tw_hour = (datetime.now(timezone.utc) + timedelta(hours=8)).hour
+
+        if 6 <= tw_hour < 10:       # breakfast 06–10
+            boosts = {"早午餐", "咖啡廳", "珍珠奶茶"}
+        elif 10 <= tw_hour < 14:    # lunch 10–14
+            boosts = {"拉麵", "台式便當", "壽司", "韓式料理", "義大利麵"}
+        elif 14 <= tw_hour < 17:    # afternoon 14–17
+            boosts = {"甜點", "咖啡廳", "珍珠奶茶"}
+        elif 17 <= tw_hour < 21:    # dinner 17–21
+            boosts = {"火鍋", "牛排", "烤肉", "炸雞", "披薩", "壽司"}
+        else:                        # late night 21–06
+            boosts = {"鍋貼", "拉麵", "炸雞", "漢堡", "珍珠奶茶"}
+
+        # Boosted items appear 3× more often
+        weighted = []
+        for opt in all_options:
+            weight = 3 if opt["label"] in boosts else 1
+            weighted.extend([opt] * weight)
+
+        chosen = random.choice(weighted)
+        chosen["hint"] = _spin_time_hint(tw_hour)
+        return chosen
+
     # ── GET /health ──────────────────────────────────────────────────────────
 
     @app.get("/health")
@@ -402,6 +453,14 @@ def _generate_reasons(restaurants: list[Restaurant], parsed: ParsedQuery) -> dic
             f"符合您「{parsed.time}分鐘以內」的需求。"
         )
     return reasons
+
+
+def _spin_time_hint(hour: int) -> str:
+    if 6 <= hour < 10:    return "早安！早餐時間推薦你來這個 🌅"
+    if 10 <= hour < 14:   return "午餐時間到了，命運之輪幫你選好了！🌞"
+    if 14 <= hour < 17:   return "下午茶時刻，讓命運決定吧 ☕"
+    if 17 <= hour < 21:   return "晚餐時間！今晚就吃這個 🌆"
+    return "深夜了還在吃？好吧，輪盤說了算 🌙"
 
 
 app = create_app()

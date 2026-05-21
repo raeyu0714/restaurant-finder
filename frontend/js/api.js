@@ -63,6 +63,16 @@ const API = {
     return res.ok ? res.json() : null;
   },
 
+  async spin() {
+    const token = Auth.getToken();
+    if (!token) throw new Error("尚未登入");
+    const res = await fetch(`${CONFIG.BACKEND_URL}/spin`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("無法連線");
+    return res.json();
+  },
+
   async removeFavourite(restaurantId) {
     const token = Auth.getToken();
     const res = await fetch(`${CONFIG.BACKEND_URL}/favourites/${encodeURIComponent(restaurantId)}`, {

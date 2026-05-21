@@ -53,6 +53,7 @@ const App = {
     document.getElementById("location-display").style.display = "inline";
     this._bindRelocate();
     this._bindChat();
+    this._bindSpinBtn();
     this._bindFavSidebar();
     this._loadLocation();
     this._loadFavourites();
@@ -245,6 +246,96 @@ const App = {
   // ── Chat ──────────────────────────────────────────────────────────────────
 
   _chatOpen: false,
+
+  // ── Spin wheel ────────────────────────────────────────────────────────────
+
+  _spinResult: null,
+
+  _bindSpinBtn() {
+    document.getElementById("spin-btn").addEventListener("click", () => this._openSpin());
+    document.getElementById("spin-cancel-btn").addEventListener("click", () => this._closeSpin());
+    document.getElementById("spin-again-btn").addEventListener("click", () => this._startSpin());
+    document.getElementById("spin-confirm-btn").addEventListener("click", () => {
+      if (!this._spinResult) return;
+      this._closeSpin();
+      document.getElementById("chat-input").value = this._spinResult.query;
+      this._handleMessage(this._spinResult.query);
+    });
+  },
+
+  _openSpin() {
+    document.getElementById("spin-overlay").style.display = "flex";
+    this._startSpin();
+  },
+
+  _closeSpin() {
+    document.getElementById("spin-overlay").style.display = "none";
+  },
+
+  async _startSpin() {
+    const slot     = document.getElementById("spin-slot");
+    const emojiEl  = document.getElementById("spin-emoji");
+    const labelEl  = document.getElementById("spin-label");
+    const resultEl = document.getElementById("spin-result");
+
+    resultEl.style.display = "none";
+    slot.classList.add("spinning");
+    this._spinResult = null;
+
+    // All display options for the animation loop
+    const display = [
+      {emoji:"🍜",label:"拉麵"}, {emoji:"🍣",label:"壽司"}, {emoji:"🫕",label:"火鍋"},
+      {emoji:"🍗",label:"炸雞"}, {emoji:"🥩",label:"牛排"}, {emoji:"🍔",label:"漢堡"},
+      {emoji:"🍕",label:"披薩"}, {emoji:"🍰",label:"甜點"}, {emoji:"☕",label:"咖啡廳"},
+      {emoji:"🥘",label:"韓式"}, {emoji:"🍱",label:"便當"}, {emoji:"🥞",label:"早午餐"},
+      {emoji:"🧋",label:"奶茶"}, {emoji:"🍝",label:"義大利麵"},{emoji:"🔥",label:"烤肉"},
+      {emoji:"🥟",label:"鍋貼"},
+    ];
+
+    // Fire Python API call immediately
+    const apiPromise = API.spin();
+
+    // Animation: cycle fast then slow
+    let idx = 0, interval = 80, timer = null;
+    const MIN_SPIN_MS = 2000;
+    const startTime   = Date.now();
+    let apiDone = false, apiData = null;
+
+    const tick = () => {
+      idx = (idx + 1) % display.length;
+      emojiEl.textContent = display[idx].emoji;
+      labelEl.textContent = display[idx].label;
+
+      // Slow down after MIN_SPIN_MS
+      const elapsed = Date.now() - startTime;
+      if (elapsed > MIN_SPIN_MS && apiDone) {
+        interval = Math.min(interval + 40, 350);
+      }
+
+      // Stop when slow enough and API is done
+      if (interval >= 350 && apiDone) {
+        clearTimeout(timer);
+        slot.classList.remove("spinning");
+        emojiEl.textContent = apiData.emoji;
+        labelEl.textContent = apiData.label;
+        this._spinResult = apiData;
+        document.getElementById("spin-result-text").textContent = apiData.hint;
+        resultEl.style.display = "flex";
+        return;
+      }
+      timer = setTimeout(tick, interval);
+    };
+    timer = setTimeout(tick, interval);
+
+    try {
+      apiData = await apiPromise;
+      apiDone = true;
+    } catch {
+      clearTimeout(timer);
+      slot.classList.remove("spinning");
+      labelEl.textContent = "連線失敗";
+    }
+  },
 
   _bindChat() {
     document.getElementById("chat-toggle").addEventListener("click", () => {

@@ -371,6 +371,79 @@ body.chat-open #map-container {
   50%      { opacity: 1; }
 }
 
+/* ── Spin wheel modal ────────────────────────────────────── */
+#spin-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 600;
+}
+#spin-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2rem 2.2rem;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+#spin-title {
+  font-size: 1.15rem; font-weight: 700; color: #2c3e50;
+}
+#spin-slot {
+  width: 160px; height: 130px;
+  border: 3px solid #3498db;
+  border-radius: 16px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #f0f8ff;
+  overflow: hidden;
+}
+#spin-emoji {
+  font-size: 3.2rem;
+  line-height: 1;
+  transition: transform .08s ease;
+}
+#spin-label {
+  font-size: 1.1rem; font-weight: 700;
+  color: #2c3e50; margin-top: .3rem;
+}
+#spin-slot.spinning {
+  border-color: #e74c3c;
+  background: #fff5f5;
+  animation: slotPulse .4s ease infinite alternate;
+}
+@keyframes slotPulse {
+  from { box-shadow: 0 0 0 0 rgba(231,76,60,.3); }
+  to   { box-shadow: 0 0 0 8px rgba(231,76,60,0); }
+}
+#spin-result { width: 100%; display: flex; flex-direction: column; gap: .55rem; }
+#spin-result-text {
+  font-size: .85rem; color: #666; font-style: italic;
+}
+#spin-confirm-btn {
+  width: 100%; padding: .65rem;
+  background: #27ae60; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background .2s;
+}
+#spin-confirm-btn:hover { background: #219a52; }
+#spin-again-btn {
+  width: 100%; padding: .5rem;
+  background: #f0f3f6; color: #555;
+  border: 1px solid #dde3ea; border-radius: 10px;
+  font-size: .9rem; cursor: pointer; transition: background .2s;
+}
+#spin-again-btn:hover { background: #e2e8f0; }
+#spin-cancel-btn {
+  background: none; border: none;
+  color: #aaa; font-size: .82rem;
+  cursor: pointer; transition: color .15s;
+}
+#spin-cancel-btn:hover { color: #e74c3c; }
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 640px) {
   #chat-panel { width: 100%; top: 48px; }
