@@ -18,13 +18,11 @@ body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-se
   display: block;
 }
 /* When chat is open, map shrinks from the right */
-body.chat-open #map-container {
-  right: 360px;
-}
+body.chat-open #map-container { right: 360px; }
 /* When groups panel is open, map shifts right (groups on left) */
-body.groups-open #map-container {
-  left: 360px;
-}
+body.groups-open #map-container { left: 360px; }
+/* When favourites panel is open, map shifts right (fav on left) */
+body.fav-open #map-container { left: 360px; }
 #map-placeholder {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -109,13 +107,13 @@ body.groups-open #map-container {
 #fav-sidebar {
   position: fixed;
   top: 48px; bottom: 0;
-  left: -260px;
-  width: 260px;
+  left: -360px;
+  width: 360px;
   z-index: 210;
   transition: left .3s ease;
   display: none;
 }
-#fav-sidebar.open { left: 0; }
+body.fav-open #fav-sidebar { left: 0; }
 
 #fav-tab {
   position: fixed;
@@ -139,7 +137,7 @@ body.groups-open #map-container {
 #fav-tab.active { background: #fff0f0; border-color: #f5c6c6; }
 
 #fav-content {
-  width: 260px; height: 100%;
+  width: 360px; height: 100%;
   background: #fff;
   border-right: 1px solid #dde3ea;
   box-shadow: 4px 0 20px rgba(0,0,0,.12);
@@ -914,6 +912,9 @@ body.groups-open #map-container {
   body.chat-open #map-container { right: 55%; }
   #groups-panel { width: 55%; }
   body.groups-open #map-container { left: 55%; }
+  #fav-sidebar { width: 55%; left: -55%; }
+  #fav-content { width: 100%; }
+  body.fav-open #map-container { left: 55%; }
 }
 
 /* Mobile (≤640px) */
@@ -956,10 +957,18 @@ body.groups-open #map-container {
   #groups-btn { padding: .5rem .42rem; font-size: 1rem; top: calc(50vh - 40px); }
   #fav-tab    { padding: .5rem .42rem; font-size: 1rem; top: calc(50vh + 35px); }
 
-  /* Favourites sidebar — slides in fully within screen */
-  #fav-sidebar { width: 80vw; left: -80vw; }
-  #fav-sidebar.open { left: 0; }
-  #fav-content { width: 80vw; }
+  /* Favourites — bottom sheet on mobile, same as chat/groups */
+  #fav-sidebar {
+    width: 100%; left: 0; right: 0;
+    top: auto; bottom: -50vh; height: 50vh;
+    border-right: none; border-top: 1px solid #dde3ea;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 28px rgba(0,0,0,.15);
+    transition: bottom .3s ease;
+  }
+  body.fav-open #fav-sidebar { bottom: 0; }
+  body.fav-open #map-container { left: 0; right: 0; bottom: 50vh; }
+  #fav-content { width: 100%; }
 
   /* Groups panel — bottom sheet on mobile, 50% height */
   #groups-panel {

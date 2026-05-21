@@ -282,9 +282,22 @@ const App = {
     });
   },
 
+  _openFavSidebar() {
+    this._closeChat();
+    GroupsPanel.close();
+    this._favOpen = true;
+    document.body.classList.add("fav-open");
+    document.getElementById("fav-tab").classList.add("active");
+  },
+
+  _closeFavSidebar() {
+    this._favOpen = false;
+    document.body.classList.remove("fav-open");
+    document.getElementById("fav-tab").classList.remove("active");
+  },
+
   _toggleFavSidebar() {
-    this._favOpen = !this._favOpen;
-    document.getElementById("fav-sidebar").classList.toggle("open", this._favOpen);
+    this._favOpen ? this._closeFavSidebar() : this._openFavSidebar();
   },
 
   async _loadFavourites() {
@@ -473,7 +486,8 @@ const App = {
   },
 
   _openChat() {
-    GroupsPanel.close();          // close groups panel if open
+    GroupsPanel.close();
+    this._closeFavSidebar();
     this._chatOpen = true;
     document.body.classList.add("chat-open");
     document.getElementById("chat-panel").style.display = "flex";
@@ -725,7 +739,8 @@ const GroupsPanel = {
   },
 
   open() {
-    App._closeChat();             // close AI chat panel if open
+    App._closeChat();
+    App._closeFavSidebar();
     document.getElementById("groups-btn").classList.add("active");
     document.getElementById("groups-panel").style.display = "flex";
     document.body.classList.add("groups-open");
