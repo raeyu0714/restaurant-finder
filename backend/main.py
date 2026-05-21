@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 
 import httpx
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -144,6 +144,7 @@ def create_app() -> FastAPI:
     @app.post("/demo/trace")
     async def demo_trace(
         req: SearchRequest,
+        raw_request: Request,
         user: dict = Depends(get_current_user),
     ):
         """Runs the full search pipeline and returns intermediate data at each step,
@@ -155,13 +156,14 @@ def create_app() -> FastAPI:
         steps = []
 
         # ── Step 1: JWT ──────────────────────────────────────────────────────
+        bearer_token = raw_request.headers.get("authorization", "Bearer <token>")
         steps.append({
             "id": "jwt", "emoji": "🔐", "title": "JWT 驗證",
             "description": "後端收到 Authorization header，用 HMAC-SHA256 驗證 Token 合法性",
             "raw_request": (
                 f"POST /demo/trace HTTP/1.1\n"
-                f"Host: {settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else 'backend'}\n"
-                f"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.<payload>.<sig>\n"
+                f"Host: {raw_request.headers.get('host', 'backend')}\n"
+                f"{bearer_token}\n"
                 f"Content-Type: application/json\n\n"
                 f"{{\n"
                 f'  "query": "{req.query}",\n'
