@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 
 _STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "users.json")
 _lock = threading.Lock()
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
 
 
 def _load() -> dict:
