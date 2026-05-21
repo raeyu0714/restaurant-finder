@@ -1,14 +1,32 @@
+import hashlib
+import hmac
 import json
 import os
+import secrets
 import threading
 import uuid
 from datetime import datetime, timezone
 
-from passlib.context import CryptContext
-
 _STORE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "users.json")
 _lock = threading.Lock()
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
+
+
+def _hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    """PBKDF2-HMAC-SHA256 password hashing. Returns (hash_hex, salt_hex)."""
+    if salt is None:
+        salt = secrets.token_hex(32)
+    key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        iterations=260_000,
+    )
+    return key.hex(), salt
+
+
+def _verify_password(password: str, stored_hash: str, salt: str) -> bool:
+    key, _ = _hash_password(password, salt)
+    return hmac.compare_digest(key, stored_hash)
 
 
 def _load() -> dict:
@@ -25,23 +43,18 @@ def _save(data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _trunc(password: str) -> str:
-    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
-
-
 def create_user(username: str, password: str) -> dict:
-    """
-    Creates a new user. Raises ValueError if username already taken.
-    Returns the created user dict (without password_hash).
-    """
+    """Creates a new user. Raises ValueError if username already taken."""
     with _lock:
         data = _load()
         if username in data:
             raise ValueError("帳號已存在")
+        pw_hash, salt = _hash_password(password)
         user = {
             "id": str(uuid.uuid4()),
             "username": username,
-            "password_hash": _pwd.hash(_trunc(password)),
+            "password_hash": pw_hash,
+            "salt": salt,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         data[username] = user
@@ -56,7 +69,7 @@ def verify_user(username: str, password: str) -> bool:
         user = data.get(username)
         if not user:
             return False
-        return _pwd.verify(_trunc(password), user["password_hash"])
+        return _verify_password(password, user["password_hash"], user["salt"])
 
 
 def list_users() -> list[dict]:
