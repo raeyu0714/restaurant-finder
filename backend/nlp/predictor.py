@@ -29,7 +29,8 @@ except ImportError:
     _ST_AVAILABLE = False
 
 MODEL_DIR  = os.path.join(os.path.dirname(__file__), "models")
-MODEL_NAME = os.path.join(os.path.dirname(__file__), "local_model")
+_LOCAL_MODEL = os.path.join(os.path.dirname(__file__), "local_model")
+MODEL_NAME = _LOCAL_MODEL if os.path.isdir(_LOCAL_MODEL) else "paraphrase-multilingual-MiniLM-L12-v2"
 
 DEFAULT_TIME         = 15
 CONFIDENCE_THRESHOLD = 0.35   # below this → find_general
