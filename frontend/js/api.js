@@ -55,6 +55,13 @@ const API = {
     return res.ok ? res.json() : null;
   },
 
+  async getVoteMap(groupId, voteId, lat, lon) {
+    const token = Auth.getToken();
+    const url = `${CONFIG.BACKEND_URL}/groups/${encodeURIComponent(groupId)}/votes/${encodeURIComponent(voteId)}/map?lat=${lat}&lon=${lon}`;
+    const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+    return res.ok ? res.json() : null;
+  },
+
   async getFavouritesMap(lat, lon, favId = null) {
     const token = Auth.getToken();
     let url = `${CONFIG.BACKEND_URL}/favourites/map?lat=${lat}&lon=${lon}`;

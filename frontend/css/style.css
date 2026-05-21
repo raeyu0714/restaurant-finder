@@ -800,10 +800,22 @@ body.fav-open #fav-sidebar { left: 0; }
   font-size: .75rem; font-weight: 700; color: #4a90e2;
   z-index: 1; position: relative; white-space: nowrap;
 }
+.gp-vote-actions {
+  display: flex; gap: .4rem; margin-top: .5rem;
+}
+.gp-vote-map-btn {
+  flex: 1; padding: .35rem;
+  border-radius: 8px; background: #e8f0fd; color: #4a90e2;
+  border: 1px solid #c5d8f8; font-size: .78rem; cursor: pointer;
+  transition: background .15s;
+}
+.gp-vote-map-btn:hover { background: #d0e3f8; }
+.gp-vote-map-btn:disabled { opacity: .6; cursor: default; }
 .gp-vote-close-btn {
-  margin-top: .5rem; width: 100%; padding: .35rem;
+  flex: 1; padding: .35rem;
   border-radius: 8px; background: #fce4ec; color: #c62828;
   border: none; font-size: .78rem; cursor: pointer;
+  transition: background .15s;
 }
 .gp-vote-close-btn:hover { background: #f8bbd0; }
 .gp-no-votes { text-align: center; color: #aaa; font-size: .85rem; padding: 2rem 0; }

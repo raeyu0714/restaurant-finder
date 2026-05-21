@@ -285,6 +285,43 @@ def create_app() -> FastAPI:
         )
         return {"map_html": map_html}
 
+    # ── GET /groups/{gid}/votes/{vid}/map ────────────────────────────────────
+
+    @app.get("/groups/{group_id}/votes/{vote_id}/map")
+    async def vote_map(
+        group_id: str,
+        vote_id: str,
+        lat: float = get_settings().DEFAULT_LAT,
+        lon: float = get_settings().DEFAULT_LON,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        vote = vote_store.get_vote(vote_id)
+        if not vote:
+            raise HTTPException(status_code=404, detail="投票不存在")
+        restaurants = [
+            Restaurant(
+                id=opt["id"], name=opt["name"],
+                latitude=opt["latitude"], longitude=opt["longitude"],
+                address=opt["address"],
+                walking_minutes=opt["walking_minutes"],
+                osm_type="node", osm_id=0,
+            )
+            for opt in vote["options"]
+        ]
+        reasons = {opt["id"]: f"🗳 {vote['title']}" for opt in vote["options"]}
+        map_html = build_map(
+            user_lat=lat, user_lon=lon,
+            restaurants=restaurants,
+            routes={}, reasons=reasons,
+            parsed_query=None,
+            fav_ids=set(),
+        )
+        return {"map_html": map_html}
+
     # ── POST /search ─────────────────────────────────────────────────────────
 
     @app.post("/search", response_model=SearchResponse)

@@ -681,6 +681,7 @@ const GroupsPanel = {
   _currentGroupId: null,
   _currentGroup:   null,
   _pollTimer:      null,
+  _voteTimer:      null,
   _lastMsgCount:   0,
   _groups:         [],
 
@@ -881,7 +882,7 @@ const GroupsPanel = {
 
     this._stopPolling();
     if (tab === "chat")    { this._fetchMessages(); this._startPolling(); }
-    if (tab === "votes")   { this._loadVotes(); }
+    if (tab === "votes")   { this._loadVotes(); this._startVotePoll(); }
     if (tab === "members") { this._renderMembers(); }
   },
 
@@ -892,6 +893,24 @@ const GroupsPanel = {
   },
   _stopPolling() {
     if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+    this._stopVotePoll();
+  },
+  _startVotePoll() {
+    this._voteTimer = setInterval(() => this._silentRefreshVotes(), 5000);
+  },
+  _stopVotePoll() {
+    if (this._voteTimer) { clearInterval(this._voteTimer); this._voteTimer = null; }
+  },
+  async _silentRefreshVotes() {
+    if (!this._currentGroupId) return;
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/votes`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (!res.ok) return;
+      const votes = await res.json();
+      this._renderVotes(votes);
+    } catch {}
   },
 
   async _fetchMessages() {
@@ -998,13 +1017,30 @@ const GroupsPanel = {
       card.innerHTML = `
         <div class="gp-vote-title">${this._esc(v.title)} ${statusLabel}</div>
         <div class="gp-vote-options">${optionsHtml}</div>
-        ${closeBtn}`;
+        <div class="gp-vote-actions">
+          <button class="gp-vote-map-btn" data-vid="${this._esc(v.id)}">🗺 顯示在地圖</button>
+          ${closeBtn}
+        </div>`;
 
       if (v.status === "open") {
         card.querySelectorAll(".gp-vote-option").forEach(el => {
           el.addEventListener("click", () => this._castVote(el.dataset.vid, el.dataset.oid));
         });
       }
+      card.querySelector(".gp-vote-map-btn").addEventListener("click", async e => {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        btn.textContent = "載入中…";
+        btn.disabled = true;
+        const data = await API.getVoteMap(
+          this._currentGroupId, v.id,
+          App._lat ?? CONFIG.DEFAULT_LAT,
+          App._lon ?? CONFIG.DEFAULT_LON
+        );
+        btn.textContent = "🗺 顯示在地圖";
+        btn.disabled = false;
+        if (data) App._injectMap(data.map_html);
+      });
       if (closeBtn) {
         card.querySelector(".gp-vote-close-btn").addEventListener("click", e => {
           e.stopPropagation();
