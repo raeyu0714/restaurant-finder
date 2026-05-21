@@ -304,10 +304,40 @@ def create_app() -> FastAPI:
                 "parsed_query": parsed.model_dump(),
             })
 
+        # Fetch Google ratings + reviews concurrently for all filtered places
+        review_tasks = []
+        for place, _ in filtered:
+            if place.get("_rating") is not None:
+                # Already have rating from Google Places search result
+                review_tasks.append(None)
+            elif settings.GOOGLE_MAPS_API_KEY:
+                # Nominatim result — fetch via searchText
+                review_tasks.append(
+                    gp_service.fetch_reviews(
+                        name=place["name"],
+                        lat=place["lat"],
+                        lon=place["lon"],
+                        client=client,
+                        api_key=settings.GOOGLE_MAPS_API_KEY,
+                    )
+                )
+            else:
+                review_tasks.append(None)
+
+        review_results = await asyncio.gather(*[t for t in review_tasks if t is not None])
+        review_iter = iter(review_results)
+
         # Build Restaurant objects
         restaurants: list[Restaurant] = []
         for place, wmin in filtered:
             rid = place.get("_google_id") or f"{place['osm_type']}:{place['osm_id']}"
+            if place.get("_rating") is not None:
+                rating, review_count, reviews = place["_rating"], place["_review_count"], place["_reviews"]
+            elif settings.GOOGLE_MAPS_API_KEY:
+                rating, review_count, reviews = next(review_iter)
+            else:
+                rating, review_count, reviews = None, None, []
+
             restaurants.append(Restaurant(
                 id=rid,
                 name=place["name"],
@@ -317,6 +347,9 @@ def create_app() -> FastAPI:
                 walking_minutes=round(wmin, 1),
                 osm_type=place["osm_type"],
                 osm_id=place["osm_id"],
+                rating=rating,
+                review_count=review_count,
+                reviews=reviews,
             ))
 
         # 5. Boost favourites to the top of the list

@@ -27,6 +27,9 @@ class Restaurant(BaseModel):
     walking_minutes: float
     osm_type: str
     osm_id: int
+    rating: Optional[float] = None
+    review_count: Optional[int] = None
+    reviews: list[str] = []
 
 
 class FavouriteRequest(BaseModel):

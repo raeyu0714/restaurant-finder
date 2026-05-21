@@ -336,6 +336,28 @@ body.chat-open #map-container {
   border-radius: 4px; font-size: .7rem;
   padding: .05rem .35rem; white-space: nowrap;
 }
+.rc-rating {
+  display: inline-block;
+  font-size: .82rem; font-weight: 700;
+  color: #e67e22; margin: .1rem 0 .15rem;
+}
+.rc-review-count { font-weight: 400; color: #999; font-size: .78rem; }
+.rc-reviews { margin-top: .3rem; border-top: 1px solid #f0f0f0; padding-top: .3rem; }
+.rc-review-snippet {
+  font-size: .78rem; color: #666;
+  line-height: 1.4; margin-bottom: .2rem;
+  padding-left: .5rem;
+  border-left: 2px solid #e0e0e0;
+}
+.rc-reviews-toggle {
+  background: none; border: none;
+  color: #3498db; font-size: .76rem;
+  cursor: pointer; padding: .15rem 0;
+  margin-top: .1rem;
+}
+.rc-reviews-toggle:hover { text-decoration: underline; }
+.rc-reviews-more { margin-top: .2rem; display: flex; flex-direction: column; gap: .2rem; }
+
 .fav-btn {
   background: none; border: none;
   cursor: pointer; font-size: 1rem;
