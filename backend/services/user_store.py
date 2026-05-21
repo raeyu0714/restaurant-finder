@@ -25,6 +25,10 @@ def _save(data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def _trunc(password: str) -> str:
+    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+
+
 def create_user(username: str, password: str) -> dict:
     """
     Creates a new user. Raises ValueError if username already taken.
@@ -37,7 +41,7 @@ def create_user(username: str, password: str) -> dict:
         user = {
             "id": str(uuid.uuid4()),
             "username": username,
-            "password_hash": _pwd.hash(password),
+            "password_hash": _pwd.hash(_trunc(password)),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         data[username] = user
@@ -52,7 +56,7 @@ def verify_user(username: str, password: str) -> bool:
         user = data.get(username)
         if not user:
             return False
-        return _pwd.verify(password, user["password_hash"])
+        return _pwd.verify(_trunc(password), user["password_hash"])
 
 
 def list_users() -> list[dict]:
