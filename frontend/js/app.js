@@ -143,8 +143,11 @@ const App = {
           });
           return `<div class="admin-user-row">
             <div class="admin-avatar">${initial}</div>
-            <span class="admin-username">${u.username}</span>
-            <span class="admin-date">${date}</span>
+            <div class="admin-user-info">
+              <span class="admin-username">${u.username}</span>
+              <span class="admin-date">${date}</span>
+              <span class="admin-hash">🔒 ${u.password_hash}</span>
+            </div>
           </div>`;
         }).join("");
       } catch (err) {

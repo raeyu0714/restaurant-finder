@@ -72,15 +72,29 @@ def verify_user(username: str, password: str) -> bool:
         return _verify_password(password, user["password_hash"], user["salt"])
 
 
-def list_users() -> list[dict]:
-    """Returns all users without password hashes, sorted by created_at."""
+def list_users(include_hash: bool = False) -> list[dict]:
+    """Returns all users sorted by created_at. Optionally includes password hash."""
     with _lock:
         data = _load()
-        users = [
-            {"id": u["id"], "username": u["username"], "created_at": u["created_at"]}
-            for u in data.values()
-        ]
+        users = []
+        for u in data.values():
+            entry = {"id": u["id"], "username": u["username"], "created_at": u["created_at"]}
+            if include_hash:
+                entry["password_hash"] = u["password_hash"]
+            users.append(entry)
         return sorted(users, key=lambda u: u["created_at"])
+
+
+def reset_password(username: str, new_password: str) -> None:
+    """Resets a user's password. Raises ValueError if user not found."""
+    with _lock:
+        data = _load()
+        if username not in data:
+            raise ValueError(f"找不到用戶：{username}")
+        pw_hash, salt = _hash_password(new_password)
+        data[username]["password_hash"] = pw_hash
+        data[username]["salt"] = salt
+        _save(data)
 
 
 def get_user(username: str) -> dict | None:

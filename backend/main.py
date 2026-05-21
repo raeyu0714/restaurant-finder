@@ -137,7 +137,26 @@ def create_app() -> FastAPI:
     async def admin_users(user: dict = Depends(get_current_user)):
         if user["sub"] != settings.DEMO_USERNAME:
             raise HTTPException(status_code=403, detail="僅限管理員存取")
-        return user_store.list_users()
+        return user_store.list_users(include_hash=True)
+
+    # ── POST /admin/users/{username}/reset-password ──────────────────────────
+
+    @app.post("/admin/users/{username}/reset-password")
+    async def admin_reset_password(
+        username: str,
+        body: dict,
+        user: dict = Depends(get_current_user),
+    ):
+        if user["sub"] != settings.DEMO_USERNAME:
+            raise HTTPException(status_code=403, detail="僅限管理員存取")
+        new_password = body.get("new_password", "").strip()
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="密碼至少 6 個字元")
+        try:
+            user_store.reset_password(username, new_password)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        return {"status": "ok", "username": username}
 
     # ── POST /register ───────────────────────────────────────────────────────
 

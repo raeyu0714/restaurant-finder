@@ -482,8 +482,15 @@ body.chat-open #chat-toggle {
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: .85rem; flex-shrink: 0;
 }
-.admin-username { font-weight: 600; flex: 1; }
+.admin-user-info { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
+.admin-username { font-weight: 600; }
 .admin-date { color: #aaa; font-size: .75rem; }
+.admin-hash {
+  font-family: "Courier New", monospace; font-size: .68rem;
+  color: #27ae60; word-break: break-all;
+  background: #f0faf0; border-radius: 4px;
+  padding: .15rem .35rem; margin-top: .1rem;
+}
 .admin-empty { color: #aaa; text-align: center; padding: 1.5rem 0; font-size: .88rem; }
 
 #spin-overlay {
