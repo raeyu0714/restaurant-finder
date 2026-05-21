@@ -54,9 +54,7 @@ def build_map(
             f"<div style='font-family:sans-serif;min-width:160px'>"
             f"<b>{restaurant.name}</b><br>"
             f"<small>{restaurant.address}</small><br>"
-            f"🚶 步行約 <b>{walking} 分鐘</b><br>"
-            f"<hr style='margin:4px 0'>"
-            f"<em style='color:#555'>{reason}</em>"
+            f"🚶 步行約 <b>{walking} 分鐘</b>"
             f"</div>"
         )
 
