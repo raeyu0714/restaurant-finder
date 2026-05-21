@@ -446,7 +446,7 @@ body.chat-open #chat-toggle {
   background: #fff;
   border-radius: 16px;
   width: min(480px, 92vw);
-  max-height: 80vh;
+  height: min(600px, 85vh);
   display: flex; flex-direction: column;
   box-shadow: 0 10px 50px rgba(0,0,0,.3);
   overflow: hidden;
@@ -468,7 +468,7 @@ body.chat-open #chat-toggle {
   font-size: .82rem; color: #3498db; cursor: pointer;
 }
 /* Input screen */
-#demo-input-screen { padding: 1.4rem 1.3rem; display: flex; flex-direction: column; gap: .8rem; }
+#demo-input-screen { padding: 1.4rem 1.3rem; display: flex; flex-direction: column; gap: .8rem; flex: 1; }
 #demo-intro { color: #666; font-size: .85rem; }
 #demo-query-input {
   padding: .6rem .9rem;
@@ -485,6 +485,7 @@ body.chat-open #chat-toggle {
 }
 #demo-start-btn:hover { background: #2980b9; }
 /* Steps screen */
+#demo-steps-screen { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #demo-dots {
   display: flex; justify-content: center; gap: .45rem;
   padding: .7rem 1rem .3rem;
@@ -496,7 +497,7 @@ body.chat-open #chat-toggle {
 .demo-dot.active { background: #3498db; transform: scale(1.3); }
 .demo-dot.done   { background: #27ae60; }
 #demo-step-body {
-  flex: 1; overflow-y: auto;
+  flex: 1; overflow-y: auto; min-height: 0;
   padding: .9rem 1.3rem;
   display: flex; flex-direction: column; gap: .4rem;
 }
@@ -507,8 +508,9 @@ body.chat-open #chat-toggle {
   background: #1e2a38; color: #a8d8a8;
   border-radius: 10px; padding: .85rem 1rem;
   font-size: .78rem; font-family: "Courier New", monospace;
-  line-height: 1.6; overflow-x: auto; white-space: pre-wrap;
-  margin-top: .3rem;
+  line-height: 1.6; overflow: auto; white-space: pre;
+  margin-top: .3rem; flex-shrink: 0;
+  max-height: 220px;
 }
 #demo-nav {
   display: flex; gap: .5rem; justify-content: center;

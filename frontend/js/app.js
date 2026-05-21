@@ -240,8 +240,8 @@ const App = {
       this._demoSteps = data.steps;
       this._demoIndex = 0;
       this._demoRender();
-      document.getElementById("demo-input-screen").style.display  = "none";
-      document.getElementById("demo-steps-screen").style.display  = "flex";
+      document.getElementById("demo-input-screen").style.display = "none";
+      document.getElementById("demo-steps-screen").style.display = "flex";
       this._demoBindNav();
     } catch (err) {
       errEl.textContent = err.message;
