@@ -104,7 +104,6 @@ _SKIP_FLAG_PREFIXES = ('m', 'q')
 
 # Single/ambiguous characters → expand to a more searchable term
 _KEYWORD_EXPAND = {
-    "冰":   "冰淇淋",
     "甜":   "甜點",
     "鍋":   "火鍋",
     "麵":   "麵食",

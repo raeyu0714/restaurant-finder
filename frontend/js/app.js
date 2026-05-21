@@ -456,15 +456,15 @@ const App = {
 
         const reviewsHtml = (r.reviews && r.reviews.length)
           ? `<div class="rc-reviews">
-               <div class="rc-review-snippet">${this._esc(r.reviews[0].slice(0, 80))}${r.reviews[0].length > 80 ? "…" : ""}</div>
-               ${r.reviews.length > 1
-                 ? `<button class="rc-reviews-toggle">看更多評論 ▾</button>
-                    <div class="rc-reviews-more" style="display:none">${
-                      r.reviews.slice(1).map(rv =>
-                        `<div class="rc-review-snippet">${this._esc(rv.slice(0, 100))}${rv.length > 100 ? "…" : ""}</div>`
-                      ).join("")
-                    }</div>`
-                 : ""}
+               <button class="rc-reviews-toggle">💬 看更多評論 (${r.reviews.length}) ▾</button>
+               <div class="rc-reviews-more" style="display:none">${
+                 r.reviews.map((rv, idx) =>
+                   `<div class="rc-review-snippet">
+                      <span class="rc-review-num">${idx + 1}</span>
+                      ${this._esc(rv.slice(0, 120))}${rv.length > 120 ? "…" : ""}
+                    </div>`
+                 ).join("")
+               }</div>
              </div>`
           : "";
 
@@ -490,7 +490,9 @@ const App = {
             const more = el.querySelector(".rc-reviews-more");
             const open = more.style.display === "none";
             more.style.display = open ? "block" : "none";
-            toggleBtn.textContent = open ? "收起評論 ▴" : "看更多評論 ▾";
+            toggleBtn.textContent = open
+              ? "收起評論 ▴"
+              : `💬 看更多評論 (${r.reviews.length}) ▾`;
           });
         }
 
