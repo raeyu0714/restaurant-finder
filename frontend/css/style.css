@@ -434,6 +434,97 @@ body.chat-open #chat-toggle {
 }
 
 /* ── Spin wheel modal ────────────────────────────────────── */
+/* ── Demo trace modal ───────────────────────────────────── */
+#demo-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 600;
+}
+#demo-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: min(480px, 92vw);
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 10px 50px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+#demo-modal-header, #demo-modal-header2 {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.1rem;
+  border-bottom: 1px solid #eee;
+  font-weight: 700; font-size: .95rem;
+  background: #f8f9fa;
+}
+.demo-close-btn {
+  background: none; border: none;
+  font-size: 1.1rem; cursor: pointer; color: #888;
+}
+.demo-close-btn:hover { color: #e74c3c; }
+#demo-back-btn {
+  background: none; border: none;
+  font-size: .82rem; color: #3498db; cursor: pointer;
+}
+/* Input screen */
+#demo-input-screen { padding: 1.4rem 1.3rem; display: flex; flex-direction: column; gap: .8rem; }
+#demo-intro { color: #666; font-size: .85rem; }
+#demo-query-input {
+  padding: .6rem .9rem;
+  border: 1.5px solid #dde3ea; border-radius: 8px;
+  font-size: .9rem; font-family: inherit;
+  outline: none;
+}
+#demo-query-input:focus { border-color: #3498db; }
+#demo-start-btn {
+  padding: .65rem 1rem;
+  background: #3498db; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+}
+#demo-start-btn:hover { background: #2980b9; }
+/* Steps screen */
+#demo-dots {
+  display: flex; justify-content: center; gap: .45rem;
+  padding: .7rem 1rem .3rem;
+}
+.demo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #dde3ea; transition: background .2s, transform .2s;
+}
+.demo-dot.active { background: #3498db; transform: scale(1.3); }
+.demo-dot.done   { background: #27ae60; }
+#demo-step-body {
+  flex: 1; overflow-y: auto;
+  padding: .9rem 1.3rem;
+  display: flex; flex-direction: column; gap: .4rem;
+}
+#demo-step-emoji { font-size: 2.2rem; text-align: center; }
+#demo-step-title { font-size: 1.05rem; font-weight: 700; text-align: center; color: #2c3e50; }
+#demo-step-desc  { font-size: .82rem; color: #666; text-align: center; line-height: 1.5; }
+#demo-step-data  {
+  background: #1e2a38; color: #a8d8a8;
+  border-radius: 10px; padding: .85rem 1rem;
+  font-size: .78rem; font-family: "Courier New", monospace;
+  line-height: 1.6; overflow-x: auto; white-space: pre-wrap;
+  margin-top: .3rem;
+}
+#demo-nav {
+  display: flex; gap: .5rem; justify-content: center;
+  padding: .8rem 1rem 1rem;
+  border-top: 1px solid #f0f0f0;
+}
+#demo-nav button {
+  padding: .45rem .9rem;
+  border: 1.5px solid #dde3ea; border-radius: 8px;
+  background: #fff; font-size: .82rem; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+#demo-nav button:hover { background: #f0f6fc; border-color: #3498db; }
+#demo-auto-btn.playing { background: #3498db; color: #fff; border-color: #3498db; }
+#demo-step-counter { font-size: .8rem; color: #888; font-weight: 400; }
+
 /* ── Admin users modal ───────────────────────────────────── */
 #admin-overlay {
   position: fixed; inset: 0;

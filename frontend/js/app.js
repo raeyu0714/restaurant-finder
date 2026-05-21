@@ -101,6 +101,7 @@ const App = {
     this._bindSpinBtn();
     this._bindFavSidebar();
     this._bindAdminBtn();
+    this._bindDemoBtn();
     this._loadLocation();
     this._loadFavourites();
   },
@@ -154,6 +155,147 @@ const App = {
 
     closeBtn.addEventListener("click", () => overlay.style.display = "none");
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.style.display = "none"; });
+  },
+
+  // ── Demo trace ────────────────────────────────────────────────────────────
+
+  _bindDemoBtn() {
+    const demoBtn = document.getElementById("demo-btn");
+    const overlay = document.getElementById("demo-overlay");
+
+    // Only show for demo/admin account
+    const token = Auth.getToken();
+    if (token) {
+      try {
+        const p = JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        if (p.sub === "demo") demoBtn.style.display = "inline-flex";
+      } catch {}
+    }
+
+    demoBtn.addEventListener("click", () => {
+      overlay.style.display = "flex";
+      document.getElementById("demo-input-screen").style.display  = "flex";
+      document.getElementById("demo-steps-screen").style.display  = "none";
+      document.getElementById("demo-query-input").value           = "";
+      document.getElementById("demo-input-error").textContent     = "";
+    });
+
+    overlay.querySelectorAll(".demo-close-btn").forEach(btn =>
+      btn.addEventListener("click", () => {
+        overlay.style.display = "none";
+        this._demoClearAuto();
+      })
+    );
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) { overlay.style.display = "none"; this._demoClearAuto(); }
+    });
+
+    document.getElementById("demo-start-btn").addEventListener("click", () => this._demoStart());
+    document.getElementById("demo-query-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") this._demoStart();
+    });
+    document.getElementById("demo-back-btn").addEventListener("click", () => {
+      this._demoClearAuto();
+      document.getElementById("demo-steps-screen").style.display = "none";
+      document.getElementById("demo-input-screen").style.display = "flex";
+    });
+  },
+
+  _demoSteps: [],
+  _demoIndex: 0,
+  _demoTimer: null,
+
+  _demoClearAuto() {
+    if (this._demoTimer) { clearInterval(this._demoTimer); this._demoTimer = null; }
+    const autoBtn = document.getElementById("demo-auto-btn");
+    if (autoBtn) { autoBtn.textContent = "⏵ 自動播放"; autoBtn.classList.remove("playing"); }
+  },
+
+  async _demoStart() {
+    const query = document.getElementById("demo-query-input").value.trim();
+    const errEl = document.getElementById("demo-input-error");
+    if (!query) { errEl.textContent = "請輸入查詢內容"; return; }
+    errEl.textContent = "";
+
+    const startBtn = document.getElementById("demo-start-btn");
+    startBtn.textContent = "載入中…";
+    startBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/demo/trace`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Auth.getToken()}`,
+        },
+        body: JSON.stringify({
+          query,
+          latitude:  this._lat  || CONFIG.DEFAULT_LAT,
+          longitude: this._lon  || CONFIG.DEFAULT_LON,
+          use_google: this._useGoogle,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "演示失敗");
+      const data = await res.json();
+      this._demoSteps = data.steps;
+      this._demoIndex = 0;
+      this._demoRender();
+      document.getElementById("demo-input-screen").style.display  = "none";
+      document.getElementById("demo-steps-screen").style.display  = "flex";
+      this._demoBindNav();
+    } catch (err) {
+      errEl.textContent = err.message;
+    } finally {
+      startBtn.textContent = "開始演示 ▶";
+      startBtn.disabled = false;
+    }
+  },
+
+  _demoRender() {
+    const steps = this._demoSteps;
+    const idx   = this._demoIndex;
+    const step  = steps[idx];
+
+    // dots
+    const dotsEl = document.getElementById("demo-dots");
+    dotsEl.innerHTML = steps.map((_, i) =>
+      `<div class="demo-dot ${i < idx ? "done" : i === idx ? "active" : ""}"></div>`
+    ).join("");
+
+    document.getElementById("demo-step-counter").textContent = `${idx + 1} / ${steps.length}`;
+    document.getElementById("demo-step-emoji").textContent   = step.emoji;
+    document.getElementById("demo-step-title").textContent   = step.title;
+    document.getElementById("demo-step-desc").textContent    = step.description;
+    document.getElementById("demo-step-data").textContent    = JSON.stringify(step.data, null, 2);
+
+    document.getElementById("demo-prev-btn").disabled = idx === 0;
+    document.getElementById("demo-next-btn").disabled = idx === steps.length - 1;
+  },
+
+  _demoBindNav() {
+    document.getElementById("demo-prev-btn").onclick = () => {
+      if (this._demoIndex > 0) { this._demoIndex--; this._demoRender(); }
+    };
+    document.getElementById("demo-next-btn").onclick = () => {
+      if (this._demoIndex < this._demoSteps.length - 1) { this._demoIndex++; this._demoRender(); }
+    };
+    const autoBtn = document.getElementById("demo-auto-btn");
+    autoBtn.onclick = () => {
+      if (this._demoTimer) {
+        this._demoClearAuto();
+      } else {
+        autoBtn.textContent = "⏸ 暫停";
+        autoBtn.classList.add("playing");
+        this._demoTimer = setInterval(() => {
+          if (this._demoIndex < this._demoSteps.length - 1) {
+            this._demoIndex++;
+            this._demoRender();
+          } else {
+            this._demoClearAuto();
+          }
+        }, 3000);
+      }
+    };
   },
 
   // ── Location + base map ───────────────────────────────────────────────────

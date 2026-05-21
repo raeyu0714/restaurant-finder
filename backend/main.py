@@ -139,6 +139,164 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=403, detail="僅限管理員存取")
         return user_store.list_users()
 
+    # ── POST /demo/trace ────────────────────────────────────────────────────
+
+    @app.post("/demo/trace")
+    async def demo_trace(
+        req: SearchRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        """Runs the full search pipeline and returns intermediate data at each step."""
+        if user["sub"] != settings.DEMO_USERNAME:
+            raise HTTPException(status_code=403, detail="僅限管理員使用")
+
+        client: httpx.AsyncClient = app.state.http_client
+        steps = []
+
+        # Step 1 — JWT
+        from jose import jwt as jose_jwt
+        token_payload = jose_jwt.get_unverified_claims(
+            user.get("_raw_token", "")
+        ) if user.get("_raw_token") else {"sub": user["sub"]}
+        steps.append({
+            "id": "jwt", "emoji": "🔐", "title": "JWT 驗證",
+            "description": "後端收到 Authorization header，用 HMAC-SHA256 驗證 Token 合法性",
+            "data": {
+                "username": user["sub"],
+                "algorithm": settings.JWT_ALGORITHM,
+                "status": "✅ 驗證通過",
+            },
+        })
+
+        # Step 2 — NLP
+        nlp_result = predict(req.query)
+        parsed = ParsedQuery(**nlp_result)
+        steps.append({
+            "id": "nlp", "emoji": "🧠", "title": "NLP 解析",
+            "description": "jieba 斷詞 → TF-IDF 特徵 → SVM 分類，解析查詢意圖與食物類型",
+            "data": {
+                "input": req.query,
+                "intent": parsed.intent,
+                "food": parsed.food,
+                "raw_keyword": parsed.raw_keyword,
+                "max_time": f"{parsed.time} 分鐘",
+                "meal": parsed.meal or "未指定",
+            },
+        })
+
+        # Step 3 — Nominatim
+        raw_places = await nom_service.search_restaurants(
+            lat=req.latitude, lon=req.longitude,
+            food=parsed.food, keywords=parsed.keywords,
+            max_minutes=parsed.time, client=client,
+            raw_keyword=parsed.raw_keyword,
+        )
+        nom_count = len(raw_places)
+        if req.use_google and settings.GOOGLE_MAPS_API_KEY:
+            radius_m = max(parsed.time * 130, 900)
+            google_results = await gp_service.search_places(
+                query=parsed.raw_keyword or parsed.food,
+                lat=req.latitude, lon=req.longitude,
+                radius_m=radius_m, client=client,
+                api_key=settings.GOOGLE_MAPS_API_KEY,
+            )
+            raw_places = _merge_places(raw_places, google_results)
+        steps.append({
+            "id": "nominatim", "emoji": "🗺", "title": "Nominatim 搜尋",
+            "description": "向 OpenStreetMap Nominatim API 搜尋附近符合條件的地點",
+            "data": {
+                "search_term": parsed.raw_keyword or parsed.food,
+                "nominatim_results": nom_count,
+                "after_merge": len(raw_places),
+                "google_mode": req.use_google,
+                "sample_names": [
+                    nom_service.parse_place(p)["name"] if p.get("osm_type") != "google"
+                    else (p.get("displayName") or {}).get("text", p.get("name", ""))
+                    for p in raw_places[:4]
+                ],
+            },
+        })
+
+        if not raw_places:
+            steps.append({"id": "osrm",  "emoji": "🚶", "title": "OSRM 步行過濾",  "description": "", "data": {"error": "Nominatim 沒有找到任何地點"}})
+            steps.append({"id": "folium","emoji": "🗺",  "title": "Folium 地圖",    "description": "", "data": {"error": "無資料"}})
+            steps.append({"id": "rsa",   "emoji": "🔏",  "title": "RSA 簽名",       "description": "", "data": {"error": "無資料"}})
+            return {"steps": steps}
+
+        places = [_parse_place(p) for p in raw_places]
+
+        # Step 4 — OSRM
+        destinations = [(p["lat"], p["lon"]) for p in places]
+        walking_minutes = await osrm_service.get_walking_times(
+            req.latitude, req.longitude, destinations, client
+        )
+        filtered = [(p, w) for p, w in zip(places, walking_minutes) if w <= parsed.time]
+        steps.append({
+            "id": "osrm", "emoji": "🚶", "title": "OSRM 步行過濾",
+            "description": "向 OSRM 路由引擎查詢每間餐廳的實際步行時間，過濾超過時限的",
+            "data": {
+                "candidates": len(places),
+                "time_limit": f"{parsed.time} 分鐘",
+                "kept": len(filtered),
+                "restaurants": [
+                    {"name": p["name"], "walking_minutes": round(w, 1)}
+                    for p, w in filtered[:5]
+                ],
+            },
+        })
+
+        if not filtered:
+            steps.append({"id": "folium","emoji": "🗺",  "title": "Folium 地圖",  "description": "", "data": {"error": "步行時間內無符合餐廳"}})
+            steps.append({"id": "rsa",   "emoji": "🔏",  "title": "RSA 簽名",     "description": "", "data": {"error": "無資料"}})
+            return {"steps": steps}
+
+        restaurants: list[Restaurant] = [
+            Restaurant(
+                id=p.get("_google_id") or f"{p['osm_type']}:{p['osm_id']}",
+                name=p["name"], latitude=p["lat"], longitude=p["lon"],
+                address=p["address"], walking_minutes=round(w, 1),
+                osm_type=p["osm_type"], osm_id=p["osm_id"],
+            )
+            for p, w in filtered
+        ]
+
+        # Step 5 — Folium
+        reasons = _generate_reasons(restaurants, parsed)
+        map_html = build_map(
+            user_lat=req.latitude, user_lon=req.longitude,
+            restaurants=restaurants, routes={}, reasons=reasons,
+            parsed_query=parsed, fav_ids=set(),
+        )
+        steps.append({
+            "id": "folium", "emoji": "🗺", "title": "Folium 地圖",
+            "description": "Python Folium 在伺服器端產生完整的 Leaflet 互動地圖 HTML",
+            "data": {
+                "markers": len(restaurants),
+                "map_size_kb": round(len(map_html) / 1024, 1),
+                "library": "folium (Python) → Leaflet.js",
+                "tiles": "OpenStreetMap",
+            },
+        })
+
+        # Step 6 — RSA sign
+        timestamp  = datetime.now(timezone.utc).isoformat()
+        signed_str = build_signed_data(restaurants, parsed, timestamp)
+        signature  = sign(signed_str, settings.RSA_PRIVATE_KEY_PEM)
+        verified   = verify(signed_str, signature, settings.RSA_PUBLIC_KEY_PEM)
+        steps.append({
+            "id": "rsa", "emoji": "🔏", "title": "RSA-PSS SHA-256 簽名",
+            "description": "後端用 RSA 私鑰簽名，前端用公鑰驗章，確保資料未被竄改",
+            "data": {
+                "algorithm": "RSA-PSS + SHA-256",
+                "salt_length": 32,
+                "signed_fields": ["restaurants", "parsed_query", "timestamp"],
+                "signature_preview": signature[:40] + "…",
+                "verified": "✅ 驗證成功" if verified else "❌ 驗證失敗",
+            },
+        })
+
+        return {"steps": steps}
+
     # ── POST /register ───────────────────────────────────────────────────────
 
     @app.post("/register", status_code=201)
