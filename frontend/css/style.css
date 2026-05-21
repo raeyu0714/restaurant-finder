@@ -17,9 +17,9 @@ body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-se
   border: none;
   display: block;
 }
-/* When chat is open, map shifts right (chat on left) */
+/* When chat is open, map shrinks from the right */
 body.chat-open #map-container {
-  left: 360px;
+  right: 360px;
 }
 /* When groups panel is open, map shifts left (groups on right) */
 body.groups-open #map-container {
@@ -118,10 +118,9 @@ body.groups-open #map-container {
 #fav-sidebar.open { left: 0; }
 
 #fav-tab {
-  position: absolute;
-  right: -38px;
-  /* viewport: 50vh + 60px = fav-sidebar top(48px) + calc(50vh + 12px) */
-  top: calc(50vh + 12px);
+  position: fixed;
+  left: 0;
+  top: calc(50vh + 25px);
   background: #fff;
   border: 1px solid #dde3ea;
   border-left: none;
@@ -134,9 +133,10 @@ body.groups-open #map-container {
   writing-mode: vertical-rl;
   text-align: center;
   user-select: none;
-  z-index: 211;
+  z-index: 215;
 }
 #fav-tab:hover { background: #fef5f5; }
+#fav-tab.active { background: #fff0f0; border-color: #f5c6c6; }
 
 #fav-content {
   width: 260px; height: 100%;
@@ -207,48 +207,40 @@ body.groups-open #map-container {
 }
 #spin-btn:hover { transform: scale(1.1) rotate(20deg); background: #d35400; }
 
-/* ── Chat toggle button (left-side vertical tab) ─────────── */
+/* ── Chat toggle button (round, bottom-right, below dice) ─── */
 #chat-toggle {
   position: fixed;
-  left: 0;
-  top: calc(50vh - 45px);
-  background: #fff;
-  border: 1px solid #dde3ea;
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-  padding: .6rem .45rem;
+  bottom: 1.8rem; right: 1.8rem;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: #3498db;
+  color: #fff; border: none;
+  font-size: 1.6rem;
+  box-shadow: 0 4px 20px rgba(52,152,219,.55);
   cursor: pointer;
-  font-size: .85rem;
-  box-shadow: 3px 0 10px rgba(0,0,0,.1);
-  writing-mode: vertical-rl;
-  text-align: center;
-  z-index: 215;
+  z-index: 300;
+  transition: transform .2s, background .2s;
   display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: background .15s;
-  user-select: none;
-  color: #333;
+  align-items: center; justify-content: center;
 }
-#chat-toggle:hover  { background: #f0f7ff; }
-#chat-toggle.open   { background: #e8f0fd; border-color: #c5d8f8; }
+#chat-toggle:hover { transform: scale(1.1); background: #2980b9; }
+#chat-toggle.open  { background: #e74c3c; }
 
-/* ── Chat panel (left side) ──────────────────────────────── */
+/* ── Chat panel (right side) ─────────────────────────────── */
 #chat-panel {
   position: fixed;
-  top: 48px; bottom: 0; left: 0;
+  top: 48px; bottom: 0; right: 0;
   width: 360px;
   background: #fff;
-  border-right: 1px solid #dde3ea;
-  box-shadow: 4px 0 24px rgba(0,0,0,.12);
+  border-left: 1px solid #dde3ea;
+  box-shadow: -4px 0 24px rgba(0,0,0,.12);
   display: flex; flex-direction: column;
   z-index: 250;
   overflow: hidden;
-  animation: slideInFromLeft .25s ease;
+  animation: slideIn .25s ease;
 }
-@keyframes slideInFromLeft {
-  from { opacity: 0; transform: translateX(-30px); }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(30px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -572,11 +564,11 @@ body.groups-open #map-container {
 }
 #spin-cancel-btn:hover { color: #e74c3c; }
 
-/* ── Groups floating button (left side, between chat and fav) */
+/* ── Groups floating button (left side, above fav-tab) */
 #groups-btn {
   position: fixed;
   left: 0;
-  top: calc(50vh + 5px);
+  top: calc(50vh - 35px);
   background: #fff;
   border: 1px solid #dde3ea;
   border-left: none;
@@ -957,16 +949,17 @@ body.groups-open #map-container {
   /* Floating dice button */
   #spin-btn { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
 
+  /* Chat toggle — round button, bottom-right, mobile sized */
+  #chat-toggle { bottom: 1.2rem; right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
+
   /* Left tabs — smaller on mobile */
-  #chat-toggle, #groups-btn { padding: .45rem .38rem; font-size: .78rem; }
-  #chat-toggle { top: calc(50vh - 40px); }
-  #groups-btn  { top: calc(50vh + 5px); }
+  #groups-btn { padding: .45rem .38rem; font-size: .78rem; top: calc(50vh - 30px); }
 
   /* Favourites sidebar — slides in fully within screen */
   #fav-sidebar { width: 80vw; left: -80vw; }
   #fav-sidebar.open { left: 0; }
   #fav-content { width: 80vw; }
-  #fav-tab { right: -36px; top: calc(50vh + 12px); }
+  #fav-tab { top: calc(50vh + 30px); }
 
   /* Groups panel — bottom sheet on mobile */
   #groups-panel {
