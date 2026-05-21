@@ -310,8 +310,8 @@ def create_app() -> FastAPI:
             if place.get("_rating") is not None:
                 # Already have rating from Google Places search result
                 review_tasks.append(None)
-            elif settings.GOOGLE_MAPS_API_KEY:
-                # Nominatim result — fetch via searchText
+            elif req.use_google and settings.GOOGLE_MAPS_API_KEY:
+                # Nominatim result — only fetch reviews when Google mode is ON
                 review_tasks.append(
                     gp_service.fetch_reviews(
                         name=place["name"],
@@ -333,7 +333,7 @@ def create_app() -> FastAPI:
             rid = place.get("_google_id") or f"{place['osm_type']}:{place['osm_id']}"
             if place.get("_rating") is not None:
                 rating, review_count, reviews = place["_rating"], place["_review_count"], place["_reviews"]
-            elif settings.GOOGLE_MAPS_API_KEY:
+            elif req.use_google and settings.GOOGLE_MAPS_API_KEY:
                 rating, review_count, reviews = next(review_iter)
             else:
                 rating, review_count, reviews = None, None, []
