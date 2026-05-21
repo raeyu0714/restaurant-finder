@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>附近餐廳搜尋</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Full-screen map (Folium iframe injected here) -->
+  <div id="map-container">
+    <div id="map-placeholder">
+      <div class="placeholder-inner">
+        <div class="spinner"></div>
+        <p>載入地圖中…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-right toolbar -->
+  <div id="toolbar">
+    <span id="toolbar-title">🍜 附近餐廳</span>
+    <span id="location-display" style="font-size:.78rem;opacity:.7;display:none"></span>
+    <!-- Location input row (hidden until relocate clicked) -->
+    <div id="location-input-row" style="display:none;align-items:center;gap:.4rem;">
+      <input id="location-input" type="text" placeholder="輸入地址，例如：台北市松山區"
+             style="padding:.3rem .6rem;border-radius:6px;border:none;font-size:.82rem;width:220px;">
+      <button id="location-search-btn" class="toolbar-btn" style="padding:.3rem .6rem;">搜尋</button>
+      <button id="location-gps-btn"    class="toolbar-btn" style="padding:.3rem .6rem;" title="使用GPS">GPS</button>
+      <button id="location-cancel-btn" class="toolbar-btn" style="padding:.3rem .5rem;opacity:.7;">✕</button>
+    </div>
+    <button id="relocate-btn" class="toolbar-btn" style="display:none" title="重新定位">📍 定位</button>
+    <button id="logout-btn"   class="toolbar-btn" style="display:none" title="登出">⎋ 登出</button>
+  </div>
+
+  <!-- Login modal (shown until authenticated) -->
+  <div id="login-overlay">
+    <div id="login-modal">
+      <h2>🍜 附近餐廳搜尋</h2>
+      <p class="login-subtitle">登入後即可搜尋您附近的餐廳</p>
+      <form id="login-form">
+        <label for="username">帳號</label>
+        <input id="username" type="text" placeholder="demo" required autocomplete="username">
+        <label for="password">密碼</label>
+        <input id="password" type="password" placeholder="••••••" required autocomplete="current-password">
+        <button type="submit" class="btn-login">登入</button>
+      </form>
+      <p id="login-error" class="error-text"></p>
+    </div>
+  </div>
+
+  <!-- Left favourites sidebar -->
+  <div id="fav-sidebar">
+    <div id="fav-tab" title="我的最愛">❤️<span id="fav-tab-label">最愛</span></div>
+    <div id="fav-content">
+      <div id="fav-panel-header">❤️ 我的最愛</div>
+      <div id="fav-list"></div>
+      <div id="fav-footer">
+        <button id="fav-show-all-btn">🗺 全部顯示在地圖</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating chat button -->
+  <button id="chat-toggle" title="開始搜尋" style="display:none">
+    <span id="chat-toggle-icon">💬</span>
+  </button>
+
+  <!-- Chat panel -->
+  <div id="chat-panel" style="display:none">
+    <div id="chat-header">
+      <span>🍜 餐廳搜尋助理</span>
+      <button id="api-toggle" class="api-toggle" title="切換搜尋來源">
+        <span id="api-toggle-label">🗺 Nominatim</span>
+      </button>
+      <button id="chat-close" title="關閉">✕</button>
+    </div>
+
+    <div id="chat-messages">
+      <div class="msg bot">
+        <span class="msg-bubble">您好！請告訴我您想吃什麼？例如：<br>
+          <em>「10分鐘內的健康午餐」</em><br>
+          <em>「我想吃麥當勞」</em><br>
+          <em>「附近的甜點店」</em>
+        </span>
+      </div>
+    </div>
+
+    <!-- Signature badge (inside chat) -->
+    <div id="signature-badge" style="display:none"></div>
+
+    <form id="chat-form">
+      <input id="chat-input" type="text" placeholder="輸入您的需求…" autocomplete="off">
+      <button type="submit" id="send-btn">➤</button>
+    </form>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/signature.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
