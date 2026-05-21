@@ -180,6 +180,24 @@ body.chat-open #map-container {
 #fav-show-all-btn:hover { background: #c0392b; }
 .fav-empty { color: #aaa; font-size: .82rem; text-align: center; padding: 1.5rem 0; }
 
+/* ── Floating dice button ────────────────────────────────── */
+#spin-btn {
+  position: fixed;
+  bottom: calc(1.8rem + 60px + 0.8rem);
+  right: 1.8rem;
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  background: #e67e22;
+  color: #fff; border: none;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 16px rgba(230,126,34,.55);
+  cursor: pointer;
+  z-index: 300;
+  transition: transform .2s, background .2s;
+  display: flex; align-items: center; justify-content: center;
+}
+#spin-btn:hover { transform: scale(1.12) rotate(20deg); background: #d35400; }
+
 /* ── Chat toggle button ──────────────────────────────────── */
 #chat-toggle {
   position: fixed;
@@ -449,4 +467,5 @@ body.chat-open #map-container {
   #chat-panel { width: 100%; top: 48px; }
   body.chat-open #map-container { right: 100%; }
   #chat-toggle { bottom: 1.2rem; right: 1.2rem; }
+  #spin-btn { bottom: calc(1.2rem + 60px + 0.7rem); right: 1.2rem; }
 }
