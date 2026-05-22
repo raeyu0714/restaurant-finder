@@ -271,7 +271,7 @@ body.fav-open #fav-sidebar { left: 0; }
   font-weight: 600;
   transition: background .2s, border-color .2s;
   white-space: nowrap;
-  min-width: 6.5rem;
+  min-width: 8rem;
   text-align: center;
 }
 .api-toggle:hover { background: rgba(255,255,255,.28); }
