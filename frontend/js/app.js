@@ -135,11 +135,11 @@ const App = {
           headers: { "Authorization": `Bearer ${Auth.getToken()}` },
         });
         if (!res.ok) throw new Error((await res.json()).detail || "存取失敗");
-        const users = await res.json();
-        if (!users.length) {
-          body.innerHTML = '<p class="admin-empty">尚無已註冊用戶</p>';
-          return;
-        }
+        const registeredUsers = await res.json();
+        // Prepend the admin (demo) account so it always appears first
+        const me = "demo";
+        const users = [{ username: me, id: "demo", created_at: null, password_hash: "(env var)" },
+                       ...registeredUsers.filter(u => u.username !== me)];
         // Fetch each user's balance
         const balances = {};
         await Promise.all(users.map(async u => {
@@ -153,10 +153,9 @@ const App = {
 
         body.innerHTML = users.map(u => {
           const initial = u.username.charAt(0).toUpperCase();
-          const date = new Date(u.created_at).toLocaleString("zh-TW", {
-            year:"numeric", month:"2-digit", day:"2-digit",
-            hour:"2-digit", minute:"2-digit",
-          });
+          const date = u.created_at
+            ? new Date(u.created_at).toLocaleString("zh-TW", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" })
+            : "管理員帳號";
           const bal = balances[u.username] ?? 0;
           return `<div class="admin-user-row">
             <div class="admin-avatar">${initial}</div>
@@ -744,6 +743,10 @@ const GroupsPanel = {
 
     document.getElementById("gp-close").addEventListener("click", () => this.close());
 
+    // Wallet view
+    document.getElementById("gp-wallet-btn").addEventListener("click", () => this._openWalletView());
+    document.getElementById("gp-wallet-back").addEventListener("click", () => this._showView("list"));
+
     // Invitation bar
     document.getElementById("gp-inv-open").addEventListener("click", () => this._showView("inv"));
     document.getElementById("gp-inv-back").addEventListener("click", () => this._showView("list"));
@@ -810,10 +813,12 @@ const GroupsPanel = {
   },
 
   _showView(view) {
+    document.getElementById("gp-wallet-view").style.display = view === "wallet" ? "flex" : "none";
     document.getElementById("gp-list-view").style.display   = view === "list"   ? "flex" : "none";
     document.getElementById("gp-inv-view").style.display    = view === "inv"    ? "flex" : "none";
     document.getElementById("gp-detail-view").style.display = view === "detail" ? "flex" : "none";
 
+    if (view === "wallet") { document.getElementById("gp-wallet-view").style.flexDirection = "column"; }
     if (view === "list")   { document.getElementById("gp-list-view").style.flexDirection   = "column"; }
     if (view === "inv")    { document.getElementById("gp-inv-view").style.flexDirection    = "column"; }
     if (view === "detail") { document.getElementById("gp-detail-view").style.flexDirection = "column"; }
@@ -1199,6 +1204,49 @@ const GroupsPanel = {
     } catch { /* ignore */ }
   },
 
+  async _openWalletView() {
+    this._showView("wallet");
+    document.getElementById("gp-wallet-amount").textContent = "載入中…";
+    document.getElementById("gp-wallet-tx-list").innerHTML  = "";
+    try {
+      const [walRes, txRes] = await Promise.all([
+        fetch(`${CONFIG.BACKEND_URL}/wallet`,              { headers: { "Authorization": `Bearer ${Auth.getToken()}` } }),
+        fetch(`${CONFIG.BACKEND_URL}/wallet/transactions`, { headers: { "Authorization": `Bearer ${Auth.getToken()}` } }),
+      ]);
+      if (walRes.ok) {
+        const w = await walRes.json();
+        document.getElementById("gp-wallet-amount").textContent = `$${(w.balance ?? 0).toFixed(0)}`;
+      }
+      if (txRes.ok) {
+        const txs = await txRes.json();
+        const me  = this._getCurrentUsername();
+        document.getElementById("gp-wallet-tx-list").innerHTML = txs.length
+          ? txs.map(tx => {
+              const isIn   = tx.to_user === me;
+              const sign   = isIn ? "+" : "-";
+              const cls    = isIn ? "in" : "out";
+              const icon   = tx.type === "admin_adjust" ? "🔧" : (isIn ? "📥" : "📤");
+              const who    = tx.type === "admin_adjust"
+                ? `管理員調整`
+                : (isIn ? `來自 ${this._esc(tx.from_user)}` : `轉給 ${this._esc(tx.to_user)}`);
+              const note   = tx.note ? `　${this._esc(tx.note)}` : "";
+              const date   = new Date(tx.created_at).toLocaleString("zh-TW", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+              return `<div class="wallet-tx-row">
+                <span class="wallet-tx-icon">${icon}</span>
+                <div class="wallet-tx-info">
+                  <div class="wallet-tx-desc">${who}${note}</div>
+                  <div class="wallet-tx-date">${date}</div>
+                </div>
+                <span class="wallet-tx-amount ${cls}">${sign}$${Math.abs(tx.amount).toFixed(0)}</span>
+              </div>`;
+            }).join("")
+          : '<p style="text-align:center;color:#aaa;padding:1.5rem 0;font-size:.85rem">尚無消費紀錄</p>';
+      }
+    } catch (err) {
+      document.getElementById("gp-wallet-amount").textContent = "錯誤";
+    }
+  },
+
   _openTransfer(toUsername) {
     this._transferTarget = toUsername;
     document.getElementById("transfer-to-name").textContent  = toUsername;
@@ -1246,10 +1294,10 @@ const GroupsPanel = {
 
   async _submitAdjust() {
     const amount = parseFloat(document.getElementById("adjust-amount").value);
-    const action = document.querySelector("input[name='adjust-action']:checked").value;
+    const action = "set";
     const result = document.getElementById("adjust-result");
     result.textContent = ""; result.className = "";
-    if (isNaN(amount)) { result.className = "err"; result.textContent = "請輸入有效金額"; return; }
+    if (isNaN(amount) || amount < 0) { result.className = "err"; result.textContent = "請輸入有效金額"; return; }
     try {
       const res = await fetch(`${CONFIG.BACKEND_URL}/admin/users/${this._adjustTarget}/wallet`, {
         method: "POST",

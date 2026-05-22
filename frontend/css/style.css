@@ -644,12 +644,57 @@ body.fav-open #fav-sidebar { left: 0; }
 }
 
 /* List view */
+/* ── Wallet view ──────────────────────────────────────────────────────────── */
+#gp-wallet-view {
+  display: flex; flex-direction: column; height: 100%;
+}
+#gp-wallet-header {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .8rem 1rem; border-bottom: 1px solid #eee;
+  font-weight: 600; font-size: .95rem;
+}
+#gp-wallet-back {
+  background: none; border: none; font-size: .9rem; cursor: pointer; color: #4a90e2;
+}
+#gp-wallet-balance-card {
+  margin: 1rem; padding: 1.2rem;
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  border-radius: 14px; color: #fff; text-align: center;
+}
+#gp-wallet-label { font-size: .82rem; opacity: .85; margin-bottom: .3rem; }
+#gp-wallet-amount { font-size: 2rem; font-weight: 700; }
+#gp-wallet-tx-title {
+  padding: .4rem 1rem .2rem; font-size: .8rem; color: #888; font-weight: 600; letter-spacing: .03em;
+}
+#gp-wallet-tx-list {
+  flex: 1; overflow-y: auto; padding: 0 .6rem .6rem;
+}
+.wallet-tx-row {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .4rem; border-bottom: 1px solid #f0f2f5; font-size: .83rem;
+}
+.wallet-tx-row:last-child { border-bottom: none; }
+.wallet-tx-icon { font-size: 1.1rem; flex-shrink: 0; }
+.wallet-tx-info { flex: 1; min-width: 0; }
+.wallet-tx-desc { color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wallet-tx-date { font-size: .72rem; color: #aaa; margin-top: .1rem; }
+.wallet-tx-amount { font-weight: 700; flex-shrink: 0; }
+.wallet-tx-amount.in  { color: #27ae60; }
+.wallet-tx-amount.out { color: #e74c3c; }
+
+/* ── Group list header ────────────────────────────────────────────────────── */
 #gp-list-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: .4rem;
   padding: .8rem 1rem;
   border-bottom: 1px solid #eee;
   font-weight: 600; font-size: .95rem;
 }
+#gp-list-header span { flex: 1; }
+#gp-wallet-btn {
+  background: none; border: none; font-size: 1.05rem; cursor: pointer;
+  padding: .1rem .3rem; border-radius: 6px; transition: background .15s;
+}
+#gp-wallet-btn:hover { background: #f0f3f6; }
 #gp-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
 #gp-close:hover { color: #e74c3c; }
 
@@ -917,7 +962,6 @@ body.fav-open #fav-sidebar { left: 0; }
   font-size: .9rem; outline: none;
 }
 .transfer-field input:focus { border-color: #4a90e2; }
-#adjust-action-group { display: flex; gap: 1rem; font-size: .85rem; }
 #transfer-modal-actions, #adjust-modal-actions {
   display: flex; gap: .6rem; justify-content: flex-end; margin-top: .5rem;
 }

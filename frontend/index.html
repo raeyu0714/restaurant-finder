@@ -148,10 +148,25 @@
   <!-- Groups side panel -->
   <div id="groups-panel" style="display:none">
 
+    <!-- VIEW 0: wallet -->
+    <div id="gp-wallet-view" style="display:none">
+      <div id="gp-wallet-header">
+        <button id="gp-wallet-back">← 返回</button>
+        <span>💰 我的錢包</span>
+      </div>
+      <div id="gp-wallet-balance-card">
+        <div id="gp-wallet-label">目前餘額</div>
+        <div id="gp-wallet-amount">$0</div>
+      </div>
+      <div id="gp-wallet-tx-title">消費紀錄</div>
+      <div id="gp-wallet-tx-list"></div>
+    </div>
+
     <!-- VIEW 1: group list -->
     <div id="gp-list-view">
       <div id="gp-list-header">
         <span>👪 我的群組</span>
+        <button id="gp-wallet-btn" title="我的錢包">💰</button>
         <button id="gp-close">✕</button>
       </div>
       <div id="gp-invitations-bar" style="display:none">
@@ -275,21 +290,14 @@
   <!-- Admin adjust wallet modal -->
   <div id="adjust-overlay" style="display:none">
     <div id="adjust-modal">
-      <h3>✏️ 調整餘額</h3>
+      <h3>✏️ 設定餘額</h3>
       <div class="transfer-field">
         <label>用戶</label>
         <span id="adjust-username"></span>
       </div>
       <div class="transfer-field">
-        <label for="adjust-amount">金額 ($)</label>
-        <input id="adjust-amount" type="number" step="1" placeholder="輸入金額">
-      </div>
-      <div class="transfer-field">
-        <label>操作</label>
-        <div id="adjust-action-group">
-          <label><input type="radio" name="adjust-action" value="add" checked> 增加/扣除</label>
-          <label><input type="radio" name="adjust-action" value="set"> 設為</label>
-        </div>
+        <label for="adjust-amount">設為 ($)</label>
+        <input id="adjust-amount" type="number" min="0" step="1" placeholder="輸入新餘額">
       </div>
       <div id="adjust-modal-actions">
         <button id="adjust-cancel">取消</button>
