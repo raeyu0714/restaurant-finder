@@ -103,6 +103,11 @@
     </div>
   </div>
 
+  <!-- Floating camera button (above dice) -->
+  <label id="camera-btn" title="拍照辨識食物" style="display:none">📷
+    <input id="camera-input" type="file" accept="image/*" style="display:none">
+  </label>
+
   <!-- Floating dice button (above chat toggle) -->
   <button id="spin-btn" title="幫我決定吃什麼！" style="display:none">🎲</button>
 
@@ -135,9 +140,6 @@
     <div id="signature-badge" style="display:none"></div>
 
     <form id="chat-form">
-      <label id="camera-btn" title="拍照辨識食物">📷
-        <input id="camera-input" type="file" accept="image/*" style="display:none">
-      </label>
       <input id="chat-input" type="text" placeholder="輸入您的需求…" autocomplete="off">
       <button type="submit" id="send-btn">➤</button>
     </form>

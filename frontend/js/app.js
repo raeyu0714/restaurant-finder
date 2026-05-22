@@ -94,6 +94,7 @@ const App = {
     document.getElementById("logout-btn").style.display     = "inline-flex";
     document.getElementById("chat-toggle").style.display    = "flex";
     document.getElementById("spin-btn").style.display       = "flex";
+    document.getElementById("camera-btn").style.display     = "flex";
     document.getElementById("relocate-btn").style.display   = "inline-flex";
     document.getElementById("location-display").style.display = "inline";
     this._bindRelocate();

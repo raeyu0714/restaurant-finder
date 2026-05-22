@@ -98,6 +98,11 @@ def reset_password(username: str, new_password: str) -> None:
 
 
 def get_user(username: str) -> dict | None:
+    # Demo admin is env-var only — synthesise a minimal record so callers
+    # like invite don't need to special-case it.
+    demo = os.environ.get("DEMO_USERNAME", "demo")
+    if username == demo:
+        return {"id": "demo", "username": username, "created_at": "2000-01-01T00:00:00+00:00"}
     with _lock:
         data = _load()
         user = data.get(username)
