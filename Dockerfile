@@ -22,6 +22,9 @@ COPY data/ ./data/
 # Ensure model directories exist
 RUN mkdir -p backend/nlp/models backend/cv/models/food_vit
 
+# Pre-download YOLOv8n weights at build time so first request isn't slow
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+
 # Train NLP models at build time
 RUN python -m backend.nlp.train
 
