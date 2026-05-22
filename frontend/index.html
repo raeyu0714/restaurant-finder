@@ -197,6 +197,7 @@
       </div>
       <!-- Members tab -->
       <div id="gp-tab-members" class="gp-tab-content" style="display:none">
+        <div id="gp-my-balance-bar">💰 我的餘額：<strong id="gp-my-balance">$0</strong></div>
         <div id="gp-members-list"></div>
         <div id="gp-invite-form">
           <input id="gp-invite-input" placeholder="搜尋使用者名稱…" autocomplete="off">
@@ -244,6 +245,57 @@
         <button id="spin-again-btn">再轉一次</button>
       </div>
       <button id="spin-cancel-btn">✕ 取消</button>
+    </div>
+  </div>
+
+  <!-- Transfer modal -->
+  <div id="transfer-overlay" style="display:none">
+    <div id="transfer-modal">
+      <h3>💸 轉帳</h3>
+      <div class="transfer-field">
+        <label>收款人</label>
+        <span id="transfer-to-name"></span>
+      </div>
+      <div class="transfer-field">
+        <label for="transfer-amount">金額 ($)</label>
+        <input id="transfer-amount" type="number" min="1" step="1" placeholder="輸入金額">
+      </div>
+      <div class="transfer-field">
+        <label for="transfer-note">備註（選填）</label>
+        <input id="transfer-note" type="text" placeholder="例如：午餐費">
+      </div>
+      <div id="transfer-modal-actions">
+        <button id="transfer-cancel">取消</button>
+        <button id="transfer-submit">確認轉帳</button>
+      </div>
+      <div id="transfer-result"></div>
+    </div>
+  </div>
+
+  <!-- Admin adjust wallet modal -->
+  <div id="adjust-overlay" style="display:none">
+    <div id="adjust-modal">
+      <h3>✏️ 調整餘額</h3>
+      <div class="transfer-field">
+        <label>用戶</label>
+        <span id="adjust-username"></span>
+      </div>
+      <div class="transfer-field">
+        <label for="adjust-amount">金額 ($)</label>
+        <input id="adjust-amount" type="number" step="1" placeholder="輸入金額">
+      </div>
+      <div class="transfer-field">
+        <label>操作</label>
+        <div id="adjust-action-group">
+          <label><input type="radio" name="adjust-action" value="add" checked> 增加/扣除</label>
+          <label><input type="radio" name="adjust-action" value="set"> 設為</label>
+        </div>
+      </div>
+      <div id="adjust-modal-actions">
+        <button id="adjust-cancel">取消</button>
+        <button id="adjust-submit">確認</button>
+      </div>
+      <div id="adjust-result"></div>
     </div>
   </div>
 

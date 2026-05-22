@@ -867,6 +867,76 @@ body.fav-open #fav-sidebar { left: 0; }
   padding: .1rem .4rem; border-radius: 8px;
 }
 
+/* ── Wallet / balance bar ─────────────────────────────────────────────────── */
+#gp-my-balance-bar {
+  font-size: .83rem; color: #555; padding: .4rem .5rem .6rem;
+  border-bottom: 1px solid #eef0f3; margin-bottom: .4rem;
+}
+#gp-my-balance { color: #27ae60; }
+
+.gp-member-balance {
+  font-size: .78rem; color: #888; margin-left: .3rem;
+}
+.gp-member-actions { display: flex; gap: .35rem; margin-left: auto; }
+.btn-transfer {
+  font-size: .75rem; padding: .18rem .55rem; border-radius: 6px;
+  background: #27ae60; color: #fff; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.btn-transfer:hover { background: #219a52; }
+.btn-adjust {
+  font-size: .75rem; padding: .18rem .55rem; border-radius: 6px;
+  background: #e67e22; color: #fff; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.btn-adjust:hover { background: #d35400; }
+
+/* ── Transfer / Adjust modals ─────────────────────────────────────────────── */
+#transfer-overlay, #adjust-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+}
+#transfer-modal, #adjust-modal {
+  background: #fff; border-radius: 14px;
+  padding: 1.4rem 1.6rem; width: 320px; max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+#transfer-modal h3, #adjust-modal h3 {
+  margin: 0 0 1rem; font-size: 1rem; color: #2d3748;
+}
+.transfer-field {
+  display: flex; flex-direction: column; gap: .25rem; margin-bottom: .75rem;
+}
+.transfer-field label { font-size: .78rem; color: #666; }
+.transfer-field input {
+  padding: .4rem .65rem; border: 1px solid #dde3ea; border-radius: 8px;
+  font-size: .9rem; outline: none;
+}
+.transfer-field input:focus { border-color: #4a90e2; }
+#adjust-action-group { display: flex; gap: 1rem; font-size: .85rem; }
+#transfer-modal-actions, #adjust-modal-actions {
+  display: flex; gap: .6rem; justify-content: flex-end; margin-top: .5rem;
+}
+#transfer-cancel, #adjust-cancel {
+  padding: .4rem .9rem; border-radius: 8px;
+  background: #f0f3f6; border: none; cursor: pointer; font-size: .85rem;
+}
+#transfer-submit {
+  padding: .4rem .9rem; border-radius: 8px;
+  background: #27ae60; color: #fff; border: none; cursor: pointer; font-size: .85rem;
+}
+#transfer-submit:hover { background: #219a52; }
+#adjust-submit {
+  padding: .4rem .9rem; border-radius: 8px;
+  background: #e67e22; color: #fff; border: none; cursor: pointer; font-size: .85rem;
+}
+#adjust-submit:hover { background: #d35400; }
+#transfer-result, #adjust-result {
+  margin-top: .5rem; font-size: .82rem; min-height: 1rem;
+}
+#transfer-result.ok, #adjust-result.ok { color: #27ae60; }
+#transfer-result.err, #adjust-result.err { color: #e74c3c; }
+
 #gp-invite-form {
   display: flex; gap: .5rem; margin-bottom: .5rem;
 }

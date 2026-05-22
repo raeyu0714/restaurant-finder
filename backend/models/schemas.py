@@ -81,6 +81,22 @@ class RecognizeResponse(BaseModel):
     query: str         # ready-to-use NLP query, e.g. "我想喝珍珠奶茶"
 
 
+class WalletResponse(BaseModel):
+    username: str
+    balance: float
+
+
+class AdminAdjustRequest(BaseModel):
+    amount: float
+    action: str = "add"   # "add" (can be negative) | "set"
+
+
+class TransferRequest(BaseModel):
+    to_username: str
+    amount: float
+    note: str = ""
+
+
 class SearchResponse(BaseModel):
     restaurants: list[Restaurant]
     parsed_query: ParsedQuery

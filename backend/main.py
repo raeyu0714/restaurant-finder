@@ -22,7 +22,7 @@ from .crypto.signer import sign, verify, build_signed_data
 from .models.schemas import (
     SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest, RegisterRequest,
     CreateGroupRequest, InviteRequest, SendMessageRequest, CreateVoteRequest, CastVoteRequest,
-    RecognizeResponse,
+    RecognizeResponse, WalletResponse, AdminAdjustRequest, TransferRequest,
 )
 from .nlp.predictor import predict, models_exist
 from .services import nominatim as nom_service
@@ -30,7 +30,7 @@ from .services import osrm as osrm_service
 from .services import google_places as gp_service
 from .services import favourites as fav_service
 from .services import user_store
-from .services import group_store, invitation_store, message_store, vote_store
+from .services import group_store, invitation_store, message_store, vote_store, wallet_store
 from .services.map_generator import build_map
 
 
@@ -162,6 +162,48 @@ def create_app() -> FastAPI:
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
         return {"status": "ok", "username": username}
+
+    # ── GET /admin/users/{username}/wallet ───────────────────────────────────
+
+    @app.get("/admin/users/{username}/wallet", response_model=WalletResponse)
+    async def admin_get_wallet(
+        username: str,
+        user: dict = Depends(get_current_user),
+    ):
+        if user["sub"] != settings.DEMO_USERNAME:
+            raise HTTPException(status_code=403, detail="僅限管理員存取")
+        return wallet_store.get_wallet(username)
+
+    # ── POST /admin/users/{username}/wallet ──────────────────────────────────
+
+    @app.post("/admin/users/{username}/wallet", response_model=WalletResponse)
+    async def admin_adjust_wallet(
+        username: str,
+        req: AdminAdjustRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        if user["sub"] != settings.DEMO_USERNAME:
+            raise HTTPException(status_code=403, detail="僅限管理員存取")
+        if req.action not in ("add", "set"):
+            raise HTTPException(status_code=400, detail="action 必須為 'add' 或 'set'")
+        if user_store.get_user(username) is None:
+            raise HTTPException(status_code=404, detail=f"找不到使用者：{username}")
+        try:
+            return wallet_store.admin_adjust(username, req.amount, req.action, user["sub"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    # ── GET /wallet ───────────────────────────────────────────────────────────
+
+    @app.get("/wallet", response_model=WalletResponse)
+    async def get_my_wallet(user: dict = Depends(get_current_user)):
+        return wallet_store.get_wallet(user["sub"])
+
+    # ── GET /wallet/transactions ──────────────────────────────────────────────
+
+    @app.get("/wallet/transactions")
+    async def get_my_transactions(user: dict = Depends(get_current_user)):
+        return wallet_store.get_transactions(user["sub"])
 
     # ── POST /register ───────────────────────────────────────────────────────
 
@@ -659,6 +701,34 @@ def create_app() -> FastAPI:
         if not text or len(text) > 500:
             raise HTTPException(status_code=400, detail="訊息須為 1–500 個字元")
         return message_store.add_message(gid, user["sub"], text)
+
+    # ── POST /groups/{gid}/transfer ───────────────────────────────────────────
+
+    @app.post("/groups/{gid}/transfer")
+    async def group_transfer(
+        gid: str,
+        req: TransferRequest,
+        user: dict = Depends(get_current_user),
+    ):
+        group = group_store.get_group(gid)
+        if not group:
+            raise HTTPException(status_code=404, detail="群組不存在")
+        _assert_member(group, user["sub"])
+        if req.to_username not in group["members"]:
+            raise HTTPException(status_code=400, detail="收款人不在此群組")
+        if req.to_username == user["sub"]:
+            raise HTTPException(status_code=400, detail="不能轉帳給自己")
+        try:
+            tx = wallet_store.transfer(user["sub"], req.to_username, req.amount, req.note, gid)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        # Post a system message so everyone sees the transfer in chat
+        note_part = f"　備註：{req.note}" if req.note else ""
+        message_store.add_message(
+            gid, "system",
+            f"💸 {user['sub']} 轉帳 ${req.amount:.0f} 給 {req.to_username}{note_part}"
+        )
+        return tx
 
     # ── GET /groups/{gid}/votes ───────────────────────────────────────────────
 

@@ -107,6 +107,7 @@ const App = {
     this._loadFavourites();
     document.getElementById("groups-btn").style.display = "flex";
     GroupsPanel.init();
+    GroupsPanel._bindWalletModals();
   },
 
   // ── Admin users panel ─────────────────────────────────────────────────────
@@ -919,7 +920,7 @@ const GroupsPanel = {
     this._stopPolling();
     if (tab === "chat")    { this._fetchMessages(); this._startPolling(); }
     if (tab === "votes")   { this._loadVotes(); this._startVotePoll(); }
-    if (tab === "members") { this._renderMembers(); }
+    if (tab === "members") { this._renderMembers(); this._loadMyBalance(); }
   },
 
   // ── Chat ────────────────────────────────────────────────────────────────────
@@ -1120,16 +1121,40 @@ const GroupsPanel = {
 
   // ── Members ────────────────────────────────────────────────────────────────
 
-  _renderMembers() {
-    const list = document.getElementById("gp-members-list");
-    const me   = this._getCurrentUsername();
+  async _renderMembers() {
+    const list    = document.getElementById("gp-members-list");
+    const me      = this._getCurrentUsername();
+    const isAdmin = me === (CONFIG.ADMIN_USERNAME || "demo");
     if (!this._currentGroup) { list.innerHTML = ""; return; }
+
+    // Fetch balances: admin sees all, others only see own
+    const balances = {};
+    await Promise.all(this._currentGroup.members.map(async m => {
+      try {
+        const url = isAdmin
+          ? `${CONFIG.BACKEND_URL}/admin/users/${m}/wallet`
+          : m === me ? `${CONFIG.BACKEND_URL}/wallet` : null;
+        if (!url) return;
+        const res = await fetch(url, { headers: { "Authorization": `Bearer ${Auth.getToken()}` } });
+        if (res.ok) balances[m] = (await res.json()).balance ?? 0;
+      } catch { /* ignore */ }
+    }));
+
     list.innerHTML = this._currentGroup.members.map(m => {
       const isCreator = m === this._currentGroup.creator;
+      const bal = balances[m] ?? "…";
+      const transferBtn = m !== me
+        ? `<button class="btn-transfer" onclick="GroupsPanel._openTransfer('${this._esc(m)}')">💸 轉帳</button>`
+        : "";
+      const adjustBtn = isAdmin && m !== me
+        ? `<button class="btn-adjust" onclick="GroupsPanel._openAdjust('${this._esc(m)}')">✏️ 調整</button>`
+        : "";
       return `<div class="gp-member-row">
         <div class="gp-member-avatar">${this._esc(m.charAt(0).toUpperCase())}</div>
         <div class="gp-member-name">${this._esc(m)}${m === me ? " (我)" : ""}</div>
         ${isCreator ? '<span class="gp-member-badge">建立者</span>' : ""}
+        <span class="gp-member-balance">$${typeof bal === "number" ? bal.toFixed(0) : bal}</span>
+        <div class="gp-member-actions">${transferBtn}${adjustBtn}</div>
       </div>`;
     }).join("");
     document.getElementById("gp-invite-result").textContent = "";
@@ -1158,6 +1183,106 @@ const GroupsPanel = {
       result.className = "err";
       result.textContent = `✕ ${err.message}`;
     }
+  },
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+
+  async _loadMyBalance() {
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/wallet`, {
+        headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        document.getElementById("gp-my-balance").textContent = `$${(d.balance ?? 0).toFixed(0)}`;
+      }
+    } catch { /* ignore */ }
+  },
+
+  _openTransfer(toUsername) {
+    this._transferTarget = toUsername;
+    document.getElementById("transfer-to-name").textContent  = toUsername;
+    document.getElementById("transfer-amount").value         = "";
+    document.getElementById("transfer-note").value           = "";
+    document.getElementById("transfer-result").textContent   = "";
+    document.getElementById("transfer-result").className     = "";
+    document.getElementById("transfer-overlay").style.display = "flex";
+  },
+
+  async _submitTransfer() {
+    const amount = parseFloat(document.getElementById("transfer-amount").value);
+    const note   = document.getElementById("transfer-note").value.trim();
+    const result = document.getElementById("transfer-result");
+    result.textContent = ""; result.className = "";
+    if (!amount || amount <= 0) { result.className = "err"; result.textContent = "請輸入有效金額"; return; }
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/groups/${this._currentGroupId}/transfer`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${Auth.getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ to_username: this._transferTarget, amount, note }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || "轉帳失敗");
+      result.className = "ok";
+      result.textContent = `✓ 已轉帳 $${amount.toFixed(0)} 給 ${this._transferTarget}`;
+      setTimeout(() => { document.getElementById("transfer-overlay").style.display = "none"; }, 1200);
+      this._loadMyBalance();
+      this._renderMembers();
+      this._lastMsgCount = 0; this._fetchMessages();
+    } catch (err) {
+      result.className = "err"; result.textContent = `✕ ${err.message}`;
+    }
+  },
+
+  _openAdjust(username) {
+    this._adjustTarget = username;
+    document.getElementById("adjust-username").textContent  = username;
+    document.getElementById("adjust-amount").value          = "";
+    document.getElementById("adjust-result").textContent    = "";
+    document.getElementById("adjust-result").className      = "";
+    document.querySelector("input[name='adjust-action'][value='add']").checked = true;
+    document.getElementById("adjust-overlay").style.display = "flex";
+  },
+
+  async _submitAdjust() {
+    const amount = parseFloat(document.getElementById("adjust-amount").value);
+    const action = document.querySelector("input[name='adjust-action']:checked").value;
+    const result = document.getElementById("adjust-result");
+    result.textContent = ""; result.className = "";
+    if (isNaN(amount)) { result.className = "err"; result.textContent = "請輸入有效金額"; return; }
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/admin/users/${this._adjustTarget}/wallet`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${Auth.getToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, action }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || "調整失敗");
+      result.className = "ok";
+      result.textContent = `✓ ${this._adjustTarget} 餘額已更新為 $${d.balance.toFixed(0)}`;
+      setTimeout(() => { document.getElementById("adjust-overlay").style.display = "none"; }, 1200);
+      this._renderMembers();
+    } catch (err) {
+      result.className = "err"; result.textContent = `✕ ${err.message}`;
+    }
+  },
+
+  _bindWalletModals() {
+    document.getElementById("transfer-cancel").addEventListener("click", () => {
+      document.getElementById("transfer-overlay").style.display = "none";
+    });
+    document.getElementById("transfer-submit").addEventListener("click", () => this._submitTransfer());
+    document.getElementById("adjust-cancel").addEventListener("click", () => {
+      document.getElementById("adjust-overlay").style.display = "none";
+    });
+    document.getElementById("adjust-submit").addEventListener("click", () => this._submitAdjust());
+    // Close on backdrop click
+    document.getElementById("transfer-overlay").addEventListener("click", e => {
+      if (e.target.id === "transfer-overlay") e.target.style.display = "none";
+    });
+    document.getElementById("adjust-overlay").addEventListener("click", e => {
+      if (e.target.id === "adjust-overlay") e.target.style.display = "none";
+    });
   },
 
   // ── Create group ──────────────────────────────────────────────────────────
