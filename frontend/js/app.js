@@ -140,18 +140,34 @@ const App = {
           body.innerHTML = '<p class="admin-empty">尚無已註冊用戶</p>';
           return;
         }
+        // Fetch each user's balance
+        const balances = {};
+        await Promise.all(users.map(async u => {
+          try {
+            const r = await fetch(`${CONFIG.BACKEND_URL}/admin/users/${u.username}/wallet`, {
+              headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+            });
+            if (r.ok) balances[u.username] = (await r.json()).balance ?? 0;
+          } catch { balances[u.username] = 0; }
+        }));
+
         body.innerHTML = users.map(u => {
           const initial = u.username.charAt(0).toUpperCase();
           const date = new Date(u.created_at).toLocaleString("zh-TW", {
             year:"numeric", month:"2-digit", day:"2-digit",
             hour:"2-digit", minute:"2-digit",
           });
+          const bal = balances[u.username] ?? 0;
           return `<div class="admin-user-row">
             <div class="admin-avatar">${initial}</div>
             <div class="admin-user-info">
               <span class="admin-username">${u.username}</span>
               <span class="admin-date">${date}</span>
               <span class="admin-hash">🔒 ${u.password_hash}</span>
+            </div>
+            <div class="admin-wallet-col">
+              <span class="admin-balance">$${bal.toFixed(0)}</span>
+              <button class="btn-adjust" onclick="App._openAdjustAdmin('${u.username}')">✏️ 調整</button>
             </div>
           </div>`;
         }).join("");
@@ -162,6 +178,10 @@ const App = {
 
     closeBtn.addEventListener("click", () => overlay.style.display = "none");
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.style.display = "none"; });
+  },
+
+  _openAdjustAdmin(username) {
+    GroupsPanel._openAdjust(username);
   },
 
   // ── Location + base map ───────────────────────────────────────────────────
@@ -1121,40 +1141,20 @@ const GroupsPanel = {
 
   // ── Members ────────────────────────────────────────────────────────────────
 
-  async _renderMembers() {
-    const list    = document.getElementById("gp-members-list");
-    const me      = this._getCurrentUsername();
-    const isAdmin = me === (CONFIG.ADMIN_USERNAME || "demo");
+  _renderMembers() {
+    const list = document.getElementById("gp-members-list");
+    const me   = this._getCurrentUsername();
     if (!this._currentGroup) { list.innerHTML = ""; return; }
-
-    // Fetch balances: admin sees all, others only see own
-    const balances = {};
-    await Promise.all(this._currentGroup.members.map(async m => {
-      try {
-        const url = isAdmin
-          ? `${CONFIG.BACKEND_URL}/admin/users/${m}/wallet`
-          : m === me ? `${CONFIG.BACKEND_URL}/wallet` : null;
-        if (!url) return;
-        const res = await fetch(url, { headers: { "Authorization": `Bearer ${Auth.getToken()}` } });
-        if (res.ok) balances[m] = (await res.json()).balance ?? 0;
-      } catch { /* ignore */ }
-    }));
-
     list.innerHTML = this._currentGroup.members.map(m => {
       const isCreator = m === this._currentGroup.creator;
-      const bal = balances[m] ?? "…";
       const transferBtn = m !== me
         ? `<button class="btn-transfer" onclick="GroupsPanel._openTransfer('${this._esc(m)}')">💸 轉帳</button>`
-        : "";
-      const adjustBtn = isAdmin && m !== me
-        ? `<button class="btn-adjust" onclick="GroupsPanel._openAdjust('${this._esc(m)}')">✏️ 調整</button>`
         : "";
       return `<div class="gp-member-row">
         <div class="gp-member-avatar">${this._esc(m.charAt(0).toUpperCase())}</div>
         <div class="gp-member-name">${this._esc(m)}${m === me ? " (我)" : ""}</div>
         ${isCreator ? '<span class="gp-member-badge">建立者</span>' : ""}
-        <span class="gp-member-balance">$${typeof bal === "number" ? bal.toFixed(0) : bal}</span>
-        <div class="gp-member-actions">${transferBtn}${adjustBtn}</div>
+        <div class="gp-member-actions">${transferBtn}</div>
       </div>`;
     }).join("");
     document.getElementById("gp-invite-result").textContent = "";

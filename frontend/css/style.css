@@ -512,6 +512,10 @@ body.fav-open #fav-sidebar { left: 0; }
   background: #f0faf0; border-radius: 4px;
   padding: .15rem .35rem; margin-top: .1rem;
 }
+.admin-wallet-col {
+  display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex-shrink: 0;
+}
+.admin-balance { font-size: .82rem; font-weight: 600; color: #27ae60; }
 .admin-empty { color: #aaa; text-align: center; padding: 1.5rem 0; font-size: .88rem; }
 
 #spin-overlay {
