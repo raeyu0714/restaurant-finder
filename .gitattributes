@@ -1,0 +1,1 @@
+backend/cv/models/food_vit/model.safetensors filter=lfs diff=lfs merge=lfs -text
