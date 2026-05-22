@@ -107,13 +107,7 @@ const App = {
     this._loadFavourites();
     document.getElementById("wallet-btn").style.display  = "flex";
     document.getElementById("groups-btn").style.display  = "flex";
-    document.getElementById("wallet-btn").addEventListener("click", () => {
-      const panel = document.getElementById("groups-panel");
-      if (panel.style.display === "none") {
-        GroupsPanel.open();
-      }
-      GroupsPanel._openWalletView();
-    });
+    document.getElementById("wallet-btn").addEventListener("click", () => this._toggleWallet());
     GroupsPanel.init();
     GroupsPanel._bindWalletModals();
   },
@@ -315,6 +309,7 @@ const App = {
   _openFavSidebar() {
     this._closeChat();
     GroupsPanel.close();
+    this._closeWallet();
     this._favOpen = true;
     document.body.classList.add("fav-open");
     document.getElementById("fav-tab").classList.add("active");
@@ -386,6 +381,32 @@ const App = {
       btnEl.title = "移除最愛";
     }
     this._renderFavList();
+  },
+
+  // ── Wallet panel ─────────────────────────────────────────────────────────
+
+  _walletOpen: false,
+
+  _openWallet() {
+    this._closeChat();
+    GroupsPanel.close();
+    this._closeFavSidebar();
+    this._walletOpen = true;
+    document.body.classList.add("wallet-open");
+    document.getElementById("wallet-btn").classList.add("active");
+    document.getElementById("wallet-panel").style.display = "flex";
+    GroupsPanel._openWalletView();
+  },
+
+  _closeWallet() {
+    this._walletOpen = false;
+    document.body.classList.remove("wallet-open");
+    document.getElementById("wallet-btn").classList.remove("active");
+    document.getElementById("wallet-panel").style.display = "none";
+  },
+
+  _toggleWallet() {
+    this._walletOpen ? this._closeWallet() : this._openWallet();
   },
 
   // ── Chat ──────────────────────────────────────────────────────────────────
@@ -751,9 +772,6 @@ const GroupsPanel = {
 
     document.getElementById("gp-close").addEventListener("click", () => this.close());
 
-    // Wallet back button
-    document.getElementById("gp-wallet-back").addEventListener("click", () => this._showView("list"));
-
     // Invitation bar
     document.getElementById("gp-inv-open").addEventListener("click", () => this._showView("inv"));
     document.getElementById("gp-inv-back").addEventListener("click", () => this._showView("list"));
@@ -803,6 +821,7 @@ const GroupsPanel = {
   open() {
     App._closeChat();
     App._closeFavSidebar();
+    App._closeWallet();
     document.getElementById("groups-btn").classList.add("active");
     document.getElementById("groups-panel").style.display = "flex";
     document.body.classList.add("groups-open");
@@ -820,12 +839,10 @@ const GroupsPanel = {
   },
 
   _showView(view) {
-    document.getElementById("gp-wallet-view").style.display = view === "wallet" ? "flex" : "none";
     document.getElementById("gp-list-view").style.display   = view === "list"   ? "flex" : "none";
     document.getElementById("gp-inv-view").style.display    = view === "inv"    ? "flex" : "none";
     document.getElementById("gp-detail-view").style.display = view === "detail" ? "flex" : "none";
 
-    if (view === "wallet") { document.getElementById("gp-wallet-view").style.flexDirection = "column"; }
     if (view === "list")   { document.getElementById("gp-list-view").style.flexDirection   = "column"; }
     if (view === "inv")    { document.getElementById("gp-inv-view").style.flexDirection    = "column"; }
     if (view === "detail") { document.getElementById("gp-detail-view").style.flexDirection = "column"; }
@@ -1212,7 +1229,6 @@ const GroupsPanel = {
   },
 
   async _openWalletView() {
-    this._showView("wallet");
     document.getElementById("gp-wallet-amount").textContent = "載入中…";
     document.getElementById("gp-wallet-tx-list").innerHTML  = "";
     try {
@@ -1295,7 +1311,6 @@ const GroupsPanel = {
     document.getElementById("adjust-amount").value          = "";
     document.getElementById("adjust-result").textContent    = "";
     document.getElementById("adjust-result").className      = "";
-    document.querySelector("input[name='adjust-action'][value='add']").checked = true;
     document.getElementById("adjust-overlay").style.display = "flex";
   },
 
