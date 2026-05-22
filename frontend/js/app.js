@@ -515,10 +515,10 @@ const App = {
       const btn   = document.getElementById("api-toggle");
       const label = document.getElementById("api-toggle-label");
       if (this._useGoogle) {
-        label.textContent = "🔍 Google";
+        label.textContent = "Google";
         btn.classList.add("google-active");
       } else {
-        label.textContent = "🗺 Nominatim";
+        label.textContent = "Nominatim";
         btn.classList.remove("google-active");
       }
     });
