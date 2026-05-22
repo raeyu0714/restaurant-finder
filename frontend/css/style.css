@@ -587,6 +587,28 @@ body.fav-open #fav-sidebar { left: 0; }
 }
 #spin-cancel-btn:hover { color: #e74c3c; }
 
+/* ── Wallet floating button (left side, above groups-btn) */
+#wallet-btn {
+  position: fixed;
+  left: 0;
+  top: calc(50vh - 115px);
+  background: #fff;
+  border: 1px solid #dde3ea;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  padding: .75rem .55rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  box-shadow: 3px 0 10px rgba(0,0,0,.1);
+  z-index: 215;
+  display: none;
+  align-items: center;
+  transition: background .15s;
+  user-select: none;
+}
+#wallet-btn:hover { background: #f0fff4; }
+
 /* ── Groups floating button (left side, above fav-tab) */
 #groups-btn {
   position: fixed;
@@ -690,11 +712,7 @@ body.fav-open #fav-sidebar { left: 0; }
   font-weight: 600; font-size: .95rem;
 }
 #gp-list-header span { flex: 1; }
-#gp-wallet-btn {
-  background: none; border: none; font-size: 1.05rem; cursor: pointer;
-  padding: .1rem .3rem; border-radius: 6px; transition: background .15s;
-}
-#gp-wallet-btn:hover { background: #f0f3f6; }
+
 #gp-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #888; }
 #gp-close:hover { color: #e74c3c; }
 
@@ -1114,6 +1132,7 @@ body.fav-open #fav-sidebar { left: 0; }
   #camera-btn { bottom: calc(1.2rem + 108px + 1.4rem); right: 1.2rem; width: 54px; height: 54px; font-size: 1.4rem; }
 
   /* Left tabs — smaller on mobile */
+  #wallet-btn { padding: .5rem .42rem; font-size: 1rem; top: calc(50vh - 95px); }
   #groups-btn { padding: .5rem .42rem; font-size: 1rem; top: calc(50vh - 40px); }
   #fav-tab    { padding: .5rem .42rem; font-size: 1rem; top: calc(50vh + 35px); }
 

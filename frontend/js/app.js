@@ -105,7 +105,15 @@ const App = {
     this._bindAdminBtn();
     this._loadLocation();
     this._loadFavourites();
-    document.getElementById("groups-btn").style.display = "flex";
+    document.getElementById("wallet-btn").style.display  = "flex";
+    document.getElementById("groups-btn").style.display  = "flex";
+    document.getElementById("wallet-btn").addEventListener("click", () => {
+      const panel = document.getElementById("groups-panel");
+      if (panel.style.display === "none") {
+        GroupsPanel.open();
+      }
+      GroupsPanel._openWalletView();
+    });
     GroupsPanel.init();
     GroupsPanel._bindWalletModals();
   },
@@ -743,8 +751,7 @@ const GroupsPanel = {
 
     document.getElementById("gp-close").addEventListener("click", () => this.close());
 
-    // Wallet view
-    document.getElementById("gp-wallet-btn").addEventListener("click", () => this._openWalletView());
+    // Wallet back button
     document.getElementById("gp-wallet-back").addEventListener("click", () => this._showView("list"));
 
     // Invitation bar
