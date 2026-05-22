@@ -80,6 +80,21 @@ const API = {
     return res.json();
   },
 
+  async recognize(file) {
+    const token = Auth.getToken();
+    if (!token) throw new Error("尚未登入");
+    const fd = new FormData();
+    fd.append("image", file);
+    const res = await fetch(`${CONFIG.BACKEND_URL}/recognize`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `辨識失敗 (HTTP ${res.status})`);
+    return data;
+  },
+
   async removeFavourite(restaurantId) {
     const token = Auth.getToken();
     const res = await fetch(`${CONFIG.BACKEND_URL}/favourites/${encodeURIComponent(restaurantId)}`, {

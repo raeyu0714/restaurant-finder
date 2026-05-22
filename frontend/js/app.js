@@ -98,6 +98,7 @@ const App = {
     document.getElementById("location-display").style.display = "inline";
     this._bindRelocate();
     this._bindChat();
+    this._bindCamera();
     this._bindSpinBtn();
     this._bindFavSidebar();
     this._bindAdminBtn();
@@ -478,6 +479,31 @@ const App = {
       if (!text) return;
       input.value = "";
       this._handleMessage(text);
+    });
+  },
+
+  _bindCamera() {
+    document.getElementById("camera-input").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      e.target.value = "";   // allow re-selecting the same file
+      const label = document.getElementById("camera-btn");
+      label.classList.add("loading");
+      if (!this._chatOpen) this._openChat();
+      this._addMsg("user", `📷 <em>正在辨識圖片中的食物…</em>`);
+      try {
+        const data = await API.recognize(file);
+        const pct  = Math.round(data.confidence * 100);
+        this._addMsg("bot",
+          `🍽 辨識結果：<b>${this._esc(data.food_label)}</b>（信心度 ${pct}%）<br>` +
+          `正在搜尋附近的${this._esc(data.food_label)}…`
+        );
+        await this._handleMessage(data.query);
+      } catch (err) {
+        this._addMsg("bot", `⚠️ ${this._esc(err.message)}`);
+      } finally {
+        label.classList.remove("loading");
+      }
     });
   },
 

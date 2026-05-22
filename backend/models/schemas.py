@@ -75,6 +75,12 @@ class CastVoteRequest(BaseModel):
     option_id: str
 
 
+class RecognizeResponse(BaseModel):
+    food_label: str    # Chinese food term, e.g. "珍珠奶茶"
+    confidence: float  # 0.0–1.0
+    query: str         # ready-to-use NLP query, e.g. "我想喝珍珠奶茶"
+
+
 class SearchResponse(BaseModel):
     restaurants: list[Restaurant]
     parsed_query: ParsedQuery

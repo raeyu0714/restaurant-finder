@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 
 import httpx
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -22,6 +22,7 @@ from .crypto.signer import sign, verify, build_signed_data
 from .models.schemas import (
     SearchRequest, SearchResponse, ParsedQuery, Restaurant, FavouriteRequest, RegisterRequest,
     CreateGroupRequest, InviteRequest, SendMessageRequest, CreateVoteRequest, CastVoteRequest,
+    RecognizeResponse,
 )
 from .nlp.predictor import predict, models_exist
 from .services import nominatim as nom_service
@@ -321,6 +322,24 @@ def create_app() -> FastAPI:
             fav_ids=set(),
         )
         return {"map_html": map_html}
+
+    # ── POST /recognize ──────────────────────────────────────────────────────
+
+    @app.post("/recognize", response_model=RecognizeResponse)
+    async def recognize_food(
+        image: UploadFile = File(...),
+        user: dict = Depends(get_current_user),
+    ):
+        data = await image.read()
+        if len(data) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="圖片太大（上限 10 MB）")
+        try:
+            from .cv.food_recognizer import recognize as cv_recognize
+            return cv_recognize(data)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"食物辨識模型錯誤：{e}")
 
     # ── POST /search ─────────────────────────────────────────────────────────
 

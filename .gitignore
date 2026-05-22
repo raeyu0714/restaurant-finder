@@ -25,6 +25,13 @@ backend/nlp/models/
 # Large sentence-transformer local model (too large for GitHub)
 backend/nlp/local_model/
 
+# CV training data (large, not committed)
+data/food_dataset/
+data/food-101/
+
+# CV fine-tuned model weights — too large for GitHub (327 MB), push to HF Spaces separately
+backend/cv/models/
+
 # IDE
 .idea/
 .vscode/
